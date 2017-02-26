@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Marking image {{image_id}}</title>
+</head>
+<body>
+<h3>BIG HEADER TEXT HERE {{header}}</h3>
+<image src="{{url_for('get_image', image_id=image_id)}}" width=400 height=400></image>
+<br>
+{% if image_id != 0 %}
+<a href="{{url_for('main', image_id = image_id - 1)}}"><-Prev</a>
+{% endif %}
+{% if image_id_next < 1000000 %}
+<a href="{{url_for('main', image_id=image_id_next)}}">Next-></a>
+{% endif %}
+<br>
+markdown: {{markdown}}
+
+</body>
+</html>
