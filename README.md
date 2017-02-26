@@ -5,7 +5,25 @@ Web-service to markdown appartments' plannings.
 ### Done:  
 Basic backend (Flask). Mock data, not real images.
 
-### Backend API:  
+### How to start:
+
+1. Start service: `python run.py`  
+2. Open main page: `localhost:8000`  
+3. use web-service(opened `^^^`) or API calls (`vvv`)
+
+## Web-pages structure:
+
+#### root
+
+[http://localhost:8000](http://localhost:8000)  
+redirects to the first unmarked image
+
+#### image page
+[http://localhost:8000/123](http://localhost:8000/123)  
+shows the template with picture by id
+
+
+## Backend API:  
 
 #### ID for next not marked image 
 **Request:**   
@@ -65,3 +83,5 @@ Payload: any json
 	}
 
 Saves json for image
+
+#### Root page:
