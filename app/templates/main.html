@@ -1,21 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Marking image {{image_id}}</title>
-</head>
-<body>
-<h3>BIG HEADER TEXT HERE {{header}}</h3>
-<image src="{{url_for('get_image', image_id=image_id)}}" width=400 height=400></image>
-<br>
-{% if image_id != 0 %}
-<a href="{{url_for('main', image_id = image_id - 1)}}"><-Prev</a>
-{% endif %}
-{% if image_id_next < 1000000 %}
-<a href="{{url_for('main', image_id=image_id_next)}}">Next-></a>
-{% endif %}
-<br>
-markdown: {{markdown}}
+{% extends "bootstrap/base.html" %}
+{% block title %}
+    Marking image {{image_id}}
+{% endblock %}
 
-</body>
-</html>
+{% block styles %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{url_for('.static', filename='style.css')}}">
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{url_for('.static', filename='engine.js')}}"></script>
+    <script type="text/javascript">
+        var imageObj = new Image();
+        imageObj.onload = function () {
+            context.drawImage(imageObj, 0, 0, canvas.width, canvas.height);
+        };
+        imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
+    </script>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+		<div class="col-md-2">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<h3 class="panel-title">Select an element to mark down</h3>
+				</div>
+				<div>
+					<center>
+                        {#
+                        {% for button in buttons %}
+                            more flexible, store config in file
+                        {% endfor %}
+                        #}
+						<p><button type="button" class="btn btn-default">Point</button></p>
+						<p><button type="button" class="btn btn-default">Segment</button></p>
+						<p><button type="button" class="btn btn-default">Region</button></p>
+					</center>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-8">
+			<canvas id="image-editor" width="800" height="600">
+				Your browser does not support the HTML5 canvas tag.
+			</canvas>
+		</div>
+  		<div class="col-md-2">
+  			<div class="panel panel-success">
+  				<div class="panel-heading">
+  					Elements you've marked down
+  				</div>
+  				<div>
+  					<ul class="list-group">
+                        {#
+                        {% for item in group_items %}
+                            show list of items of certain category determined by a clicked button
+                        {% endblock %}
+                        #}
+  						<li class="list-group-item">Point #2</li>
+  						<li class="list-group-item">Segment #2</li>
+  						<li class="list-group-item">Region #1</li>
+  						<li class="list-group-item">Segment #1</li>
+  						<li class="list-group-item">Point #1</li>
+  					</ul>
+  				</div>
+  			</div>
+  		</div>
+	</div>
+
+    <br>
+        {% if image_id != 0 %}
+        <a href="{{url_for('main', image_id = image_id - 1)}}"><-Prev</a>
+        {% endif %}
+        {% if image_id_next < 1000000 %}
+        {% endif %}
+    <br>
+
+    <script type="text/javascript">
+
+    </script>
+{% endblock %}

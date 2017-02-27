@@ -1,7 +1,9 @@
 from flask import Flask
+from flask_bootstrap import Bootstrap
 import json
 
 app = Flask(__name__)
+Bootstrap(app)
 
 
 class DbJson:
