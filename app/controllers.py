@@ -1,6 +1,7 @@
 from app import app, db, images
 from io import BytesIO
-from flask import send_file, redirect, jsonify, request, abort, Blueprint, render_template, url_for
+from flask import send_file, redirect, jsonify, request, abort, Blueprint, render_template
+from config import OBJECT_TYPES
 
 main_page_module = Blueprint('main_page', __name__, url_prefix='/')
 
@@ -67,3 +68,8 @@ def main(image_id):
                            image_id_prev=image_id - 1 if image_id > 0 else None,
                            image_id_next=get_next_image_id(image_id),
                            markdown=images[image_id].markdown)
+
+
+@app.route('/object_types')
+def object_types():
+    return jsonify(OBJECT_TYPES)
