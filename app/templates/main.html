@@ -8,18 +8,6 @@
     <link rel="stylesheet" href="{{url_for('.static', filename='style.css')}}">
 {% endblock %}
 
-{% block scripts %}
-    {{ super() }}
-    <script src="{{url_for('.static', filename='engine.js')}}"></script>
-    <script type="text/javascript">
-        var imageObj = new Image();
-        imageObj.onload = function () {
-            context.drawImage(imageObj, 0, 0, canvas.width, canvas.height);
-        };
-        imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
-    </script>
-{% endblock %}
-
 {% block content %}
     <div class="row">
 		<div class="col-md-2">
@@ -29,14 +17,27 @@
 				</div>
 				<div>
 					<center>
-                        {#
-                        {% for button in buttons %}
-                            more flexible, store config in file
-                        {% endfor %}
-                        #}
-						<p><button type="button" class="btn btn-default">Point</button></p>
-						<p><button type="button" class="btn btn-default">Segment</button></p>
-						<p><button type="button" class="btn btn-default">Region</button></p>
+                        <div class="btn-group-vertical">
+                            {#
+                            {% for button in buttons %}
+                                more flexible, store config in file
+                            {% endfor %}
+                            #}
+                            <p><button type="button" class="btn btn-default" id="point">Point</button></p>
+                            <p>
+                                <button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">
+                                    Segment
+                                </button>
+                            </p>
+                            <!--
+                            <div id="segment-opts" class="collapse">
+                                <div class="checkbox">
+                                    <label><input type="checkbox" value="">Along the axes</label>
+                                </div>
+                            </div>
+                            -->
+                            <p><button type="button" class="btn btn-default" id="region">Region</button></p>
+                        </div>
 					</center>
 				</div>
 			</div>
@@ -64,20 +65,25 @@
   						<li class="list-group-item">Segment #1</li>
   						<li class="list-group-item">Point #1</li>
   					</ul>
+                    <a href="{{url_for('main', image_id = image_id_next)}}" role="button" class="btn btn-success" id="next">
+                        <span class="glyphicon glyphicon-ok"></span><strong> Next</strong>
+                    </a>
   				</div>
   			</div>
   		</div>
 	</div>
 
-    <br>
-        {% if image_id != 0 %}
-        <a href="{{url_for('main', image_id = image_id - 1)}}"><-Prev</a>
-        {% endif %}
-        {% if image_id_next < 1000000 %}
-        {% endif %}
-    <br>
+	{% block scripts %}
+        {{ super() }}
+        <script src="{{url_for('.static', filename='engine.js')}}"></script>
+        <script>
+            var imageObj = new Image();
+            imageObj.onload = function () {
+                context.drawImage(imageObj, 0, 0, canvas.width, canvas.height);
+            };
+            imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
+        </script>
+	{% endblock %}
 
-    <script type="text/javascript">
-
-    </script>
+    Next image URL: {{url_for('main', image_id = image_id_next)}}
 {% endblock %}
