@@ -12,3 +12,9 @@ OBJECT_TYPES = [{'name': 'my_point',
                 {'name': 'my_region2',
                  'color': '#00CCCC',
                  'basic_type': 'REGION'}]
+
+# loading local config (if exists)
+try:
+    from local_config import *
+except ImportError:
+    pass
