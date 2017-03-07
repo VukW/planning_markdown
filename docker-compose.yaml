@@ -1,0 +1,7 @@
+version: '2'
+services:
+  plannings:
+    container_name: plannings_marking
+    build: .
+    ports:
+     - "8000:8000"
