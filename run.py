@@ -1,3 +1,4 @@
 from app import app
 from config import PORT
-app.run(port=PORT, debug=True, threaded=True)
+app.run(host='0.0.0.0', port=PORT, debug=True, threaded=True)
+
