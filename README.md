@@ -1,3 +1,5 @@
+## Description  
+
 ### What:  
 
 Web-service to markdown appartments' plannings.  
@@ -5,11 +7,19 @@ Web-service to markdown appartments' plannings.
 ### Done:  
 Basic backend (Flask). Mock data, not real images.
 
-### How to start:
+### How to start:  
+
+#### Start locally  
 
 1. Start service: `python run.py`  
 2. Open main page: `localhost:8000`  
 3. use web-service(opened `^^^`) or API calls (`vvv`)
+
+#### Start in docker  
+
+1. Build docker container: `docker-compose up`  
+2. Open main page: `localhost:8000`  
+3. use web-service(opened `^^^`) or API calls (`vvv`)  
 
 ## Web-pages structure:
 
@@ -85,3 +95,4 @@ Payload: any json
 Saves json for image
 
 #### Root page:
+
