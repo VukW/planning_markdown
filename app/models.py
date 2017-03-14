@@ -1,6 +1,9 @@
+from io import BytesIO
+
 from app import db
 import random
 from PIL import ImageDraw, Image, ImageFont
+from urllib.request import urlopen
 
 
 def random_image(seed):
@@ -45,6 +48,12 @@ def random_image(seed):
     return img
 
 
+def load_image_from_url(url):
+    img_io = urlopen(url).read()
+    img = Image.open(BytesIO(img_io))
+    return img
+
+
 class ImageToMark:
     def __init__(self, image_id):
         self.image_id = image_id
@@ -62,8 +71,13 @@ class ImageToMark:
     @property
     def image(self):
         if self._image is None:
-            self._image = random_image(self.image_id)
+            # self._image = random_image(self.image_id)
+            self._image = load_image_from_url(self.url)
         return self._image
+
+    @property
+    def url(self):
+        return db.get_full_item(self.image_id)['url']
 
 
 class ImagesToMark:

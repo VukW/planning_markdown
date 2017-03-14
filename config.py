@@ -13,6 +13,9 @@ OBJECT_TYPES = [{'name': 'my_point',
                  'color': '#00CCCC',
                  'basic_type': 'REGION'}]
 
+DB_FILE_PATH = 'saved_markdowns.json'
+DB_INIT_URLS_LIST = 'urls.txt'
+
 # loading local config (if exists)
 try:
     from local_config import *

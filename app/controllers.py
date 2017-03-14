@@ -78,6 +78,7 @@ def ls(varargs=None):
     varargs = '/' + varargs
     return jsonify(listdir(varargs))
 
+
 @app.route('/object_types')
 def object_types():
     return jsonify(OBJECT_TYPES)
