@@ -13,11 +13,23 @@ OBJECT_TYPES = [{'name': 'my_point',
                  'color': '#00CCCC',
                  'basic_type': 'REGION'}]
 
+# =============
+# DB
 DB_FILE_PATH = 'saved_markdowns.json'
 DB_INIT_URLS_LIST = 'urls.txt'
 
+# =============
+# search optimal angle to rotate
+ROTATION_RESIZING_LEVELS = [{'size': 100, 'angle_diff': 180},
+                     {'size': 200, 'angle_diff': 5}]
+ROTATION_N_TO_SPLIT = 10
+
+# =============
+# search borders to crop
 CROP_MIN_MAX_GAP = 64
 CROP_SIGNIFICANT_MEAN = 10
+
+# =============
 # loading local config (if exists)
 try:
     from local_config import *

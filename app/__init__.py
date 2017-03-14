@@ -31,8 +31,7 @@ class DbJson:
         if str(key) not in self.db_json_dict:
             self.db_json_dict[str(key)] = {'url': None}
         self.db_json_dict[str(key)].update({"markdown": value})
-        with open('saved_markdowns.json', 'w') as f:
-            json.dump(self.db_json_dict, f)
+        self.save()
 
     def generate_next_id(self):
         new_id = self._current_id
@@ -41,6 +40,10 @@ class DbJson:
 
     def all(self):
         return self.db_json_dict
+
+    def save(self):
+        with open(DB_FILE_PATH, 'w') as f:
+            print(json.dumps(self.db_json_dict), file=f)
 
     def init_from_urls(self, file_path):
         current_urls = set([self.db_json_dict[key].get('url', None) for key in self.db_json_dict])
