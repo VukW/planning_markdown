@@ -4,7 +4,7 @@ from app import db
 import random
 from PIL import ImageDraw, Image, ImageFont
 from urllib.request import urlopen
-
+import numpy as np
 
 def random_image(seed):
     random.seed(seed)
@@ -54,6 +54,66 @@ def load_image_from_url(url):
     return img
 
 
+def rotate_image(image):
+    def rotating_criteria(image_inverted, angle):
+        tmp_image = image_inverted.rotate(angle, expand=1)
+        (width, height) = tmp_image.size
+        image_array = np.array(tmp_image.getdata()).astype('uint8').reshape((height, width))
+        criterias = (np.max(np.sum(image_array, axis=0)) / height, np.max(np.sum(image_array, axis=1)) / width)
+        #print('angle: ', angle, ', ', criterias)
+        return criterias[0] * criterias[1]
+
+    (width, height) = image.size
+    # image_array = np.array(list(image.getdata())).reshape((width, height))
+    # print(image_array)
+    image_data = image.getdata()
+    image_data = 255-np.array(image_data).astype('uint8')
+    image_data = image_data.reshape(height, width)
+    image_inverted = Image.fromarray(image_data, mode='L')
+    # return image_inverted
+    opt_criteria = 0 # image.size[0] * image.size[1] * 1000000000
+    opt_angle = None
+    a0 = -45.0
+    a1 = 45.0
+    crit0 = rotating_criteria(image_inverted, a0)
+    crit1 = rotating_criteria(image_inverted, a1)
+    while (a1 - a0) > 1:
+        a2 = a0 + (a1 - a0)/3
+        a3 = a0 + (a1 - a0)*2/3
+        crit2 = rotating_criteria(image_inverted, a2)
+        crit3 = rotating_criteria(image_inverted, a3)
+        if max(crit0, crit1, crit2, crit3) == crit0:
+            a0 = a0
+            a1 = a2
+            crit0 = crit0
+            crit1 = crit2
+        elif max(crit0, crit1, crit2, crit3) == crit1:
+            a0 = a0
+            a1 = a3
+            crit0 = crit0
+            crit1 = crit3
+        elif max(crit0, crit1, crit2, crit3) == crit2:
+            a0 = a2
+            a1 = a1
+            crit0 = crit2
+            crit1 = crit1
+        else:
+            a0 = a3
+            a1 = a1
+            crit0 = crit3
+            crit1 = crit1
+    opt_angle = a1
+    opt_criteria = crit1
+    print('opt_angle: ', opt_angle, ', criterias: ', opt_criteria)
+    if opt_angle != 0:
+        tmp_image = image.rotate(opt_angle, expand=1)
+        bg_mask = Image.new(mode='L', size=image.size, color=255).rotate(opt_angle, expand=1)
+        bg = Image.new(mode='L', size=tmp_image.size, color=255)
+        bg.paste(tmp_image, mask=bg_mask)
+        return opt_angle, bg
+    return 0, image
+
+
 class ImageToMark:
     def __init__(self, image_id):
         self.image_id = image_id
@@ -70,9 +130,12 @@ class ImageToMark:
 
     @property
     def image(self):
-        if self._image is None:
+        #if self._image is None:
             # self._image = random_image(self.image_id)
-            self._image = load_image_from_url(self.url)
+        self._image = load_image_from_url(self.url)
+        self._image = self._image.convert('L')  # to grayscale
+        self._image, angle = rotate_image(self._image)  #optimal rotating
+        db.get_full_item()['angle'] = angle
         return self._image
 
     @property
