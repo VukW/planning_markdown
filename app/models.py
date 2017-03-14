@@ -5,6 +5,8 @@ import random
 from PIL import ImageDraw, Image, ImageFont
 from urllib.request import urlopen
 import numpy as np
+from config import CROP_MIN_MAX_GAP, CROP_SIGNIFICANT_MEAN
+
 
 def random_image(seed):
     random.seed(seed)
@@ -60,58 +62,85 @@ def rotate_image(image):
         (width, height) = tmp_image.size
         image_array = np.array(tmp_image.getdata()).astype('uint8').reshape((height, width))
         criterias = (np.max(np.sum(image_array, axis=0)) / height, np.max(np.sum(image_array, axis=1)) / width)
-        #print('angle: ', angle, ', ', criterias)
-        return criterias[0] * criterias[1]
+        # print('angle: ', angle, ', ', criterias)
+        return criterias[0] + criterias[1]
 
     (width, height) = image.size
     # image_array = np.array(list(image.getdata())).reshape((width, height))
-    # print(image_array)
     image_data = image.getdata()
-    image_data = 255-np.array(image_data).astype('uint8')
+    image_data = 255 - np.array(image_data).astype('uint8')
     image_data = image_data.reshape(height, width)
     image_inverted = Image.fromarray(image_data, mode='L')
     # return image_inverted
-    opt_criteria = 0 # image.size[0] * image.size[1] * 1000000000
+    opt_criteria = 0  # image.size[0] * image.size[1] * 1000000000
+    # a0 = -45.0
+    # a1 = 45.0
+    # crit0 = rotating_criteria(image_inverted, a0)
+    # crit1 = rotating_criteria(image_inverted, a1)
+    # while (a1 - a0) > 1:
+    #     a2 = a0 + (a1 - a0) / 3
+    #     a3 = a0 + (a1 - a0) * 2 / 3
+    #     crit2 = rotating_criteria(image_inverted, a2)
+    #     crit3 = rotating_criteria(image_inverted, a3)
+    #     if max(crit0, crit1, crit2, crit3) == crit0:
+    #         a0 = a0
+    #         a1 = a2
+    #         crit0 = crit0
+    #         crit1 = crit2
+    #     elif max(crit0, crit1, crit2, crit3) == crit1:
+    #         a0 = a0
+    #         a1 = a3
+    #         crit0 = crit0
+    #         crit1 = crit3
+    #     elif max(crit0, crit1, crit2, crit3) == crit2:
+    #         a0 = a2
+    #         a1 = a1
+    #         crit0 = crit2
+    #         crit1 = crit1
+    #     else:
+    #         a0 = a3
+    #         a1 = a1
+    #         crit0 = crit3
+    #         crit1 = crit1
+    # opt_angle = a1
+    # opt_criteria = crit1
+
     opt_angle = None
-    a0 = -45.0
-    a1 = 45.0
-    crit0 = rotating_criteria(image_inverted, a0)
-    crit1 = rotating_criteria(image_inverted, a1)
-    while (a1 - a0) > 1:
-        a2 = a0 + (a1 - a0)/3
-        a3 = a0 + (a1 - a0)*2/3
-        crit2 = rotating_criteria(image_inverted, a2)
-        crit3 = rotating_criteria(image_inverted, a3)
-        if max(crit0, crit1, crit2, crit3) == crit0:
-            a0 = a0
-            a1 = a2
-            crit0 = crit0
-            crit1 = crit2
-        elif max(crit0, crit1, crit2, crit3) == crit1:
-            a0 = a0
-            a1 = a3
-            crit0 = crit0
-            crit1 = crit3
-        elif max(crit0, crit1, crit2, crit3) == crit2:
-            a0 = a2
-            a1 = a1
-            crit0 = crit2
-            crit1 = crit1
-        else:
-            a0 = a3
-            a1 = a1
-            crit0 = crit3
-            crit1 = crit1
-    opt_angle = a1
-    opt_criteria = crit1
+    opt_criteria = 0
+    for angle in range(-45, 45, 2):
+        crit = rotating_criteria(image_inverted, angle)
+        if crit > opt_criteria:
+            opt_criteria = crit
+            opt_angle = angle
     print('opt_angle: ', opt_angle, ', criterias: ', opt_criteria)
     if opt_angle != 0:
         tmp_image = image.rotate(opt_angle, expand=1)
         bg_mask = Image.new(mode='L', size=image.size, color=255).rotate(opt_angle, expand=1)
         bg = Image.new(mode='L', size=tmp_image.size, color=255)
         bg.paste(tmp_image, mask=bg_mask)
-        return opt_angle, bg
-    return 0, image
+        return bg, opt_angle
+    return image, 0
+
+
+def crop_image(image):
+    print(image.size)
+    width, height = image.size
+    image_array = 255 - np.array(image.getdata()).astype('uint8').reshape((height, width))
+    hist_u_to_b = (((np.max(image_array, axis=1) - np.min(image_array, axis=1)) > CROP_MIN_MAX_GAP)
+                       | (np.mean(image_array, axis=1) > CROP_SIGNIFICANT_MEAN))
+    hist_l_to_r = (((np.max(image_array, axis=0) - np.min(image_array, axis=0)) > CROP_SIGNIFICANT_MEAN)
+                      | (np.mean(image_array, axis=0) > CROP_SIGNIFICANT_MEAN))
+    print(hist_l_to_r.shape, hist_u_to_b.shape)
+    left_border = max(np.nonzero(hist_l_to_r)[0][0] - 1, 0)
+    right_border = min(np.nonzero(hist_l_to_r)[0][-1] + 1, width)
+    up_border = max(np.nonzero(hist_u_to_b)[0][0] - 1, 0)
+    bottom_border = min(np.nonzero(hist_u_to_b)[0][-1] + 1, height)
+    borders = {'left_border': left_border,
+               'right_border': right_border,
+               'up_border': up_border,
+               'bottom_border': bottom_border}
+    image_array = 255 - image_array[up_border:bottom_border, left_border:right_border]
+    return Image.fromarray(image_array), borders
 
 
 class ImageToMark:
@@ -130,12 +159,18 @@ class ImageToMark:
 
     @property
     def image(self):
-        #if self._image is None:
-            # self._image = random_image(self.image_id)
-        self._image = load_image_from_url(self.url)
-        self._image = self._image.convert('L')  # to grayscale
-        self._image, angle = rotate_image(self._image)  #optimal rotating
-        db.get_full_item()['angle'] = angle
+        if self._image is None:
+        # self._image = random_image(self.image_id)
+            self._image = load_image_from_url(self.url)
+            ratio = min(400/self._image.size[0], 400/self._image.size[1])
+            self._image.resize((int(self._image.size[0] * ratio),
+                                int(self._image.size[1]*ratio)),
+                               Image.ANTIALIAS)
+            self._image = self._image.convert('L')  # to grayscale
+            self._image, angle = rotate_image(self._image)  # optimal rotating
+            db.get_full_item(self.image_id)['angle'] = angle
+            self._image, borders = crop_image(self._image)
+            db.get_full_item(self.image_id)['borders'] = borders
         return self._image
 
     @property

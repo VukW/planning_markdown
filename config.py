@@ -16,6 +16,8 @@ OBJECT_TYPES = [{'name': 'my_point',
 DB_FILE_PATH = 'saved_markdowns.json'
 DB_INIT_URLS_LIST = 'urls.txt'
 
+CROP_MIN_MAX_GAP = 64
+CROP_SIGNIFICANT_MEAN = 10
 # loading local config (if exists)
 try:
     from local_config import *

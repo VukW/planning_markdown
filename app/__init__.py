@@ -35,8 +35,9 @@ class DbJson:
             json.dump(self.db_json_dict, f)
 
     def generate_next_id(self):
+        new_id = self._current_id
         self._current_id += 1
-        return self._current_id
+        return new_id
 
     def all(self):
         return self.db_json_dict
