@@ -18,11 +18,13 @@
 				<div>
 					<center>
                         <div class="btn-group-vertical">
-                            {#
+							{#
                             {% for button in buttons %}
-                                more flexible, store config in file
+                                <button type="button" class="btn btn-default" id="{{ button.id }}">
+									{{ button.name }}
+								</button>
                             {% endfor %}
-                            #}
+							#}
                             <p><button type="button" class="btn btn-default" id="point">Point</button></p>
                             <p>
                                 <button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">

@@ -4,6 +4,7 @@ import json
 
 app = Flask(__name__)
 Bootstrap(app)
+app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
 
 class DbJson:
