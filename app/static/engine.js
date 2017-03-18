@@ -18,6 +18,7 @@ var rect = canvas.getBoundingClientRect();
 var borderWidth = 1;
 
 var elements = {point: [], segment: [], region: []};
+var empty_markdown = 1;
 
 canvas.addEventListener('mousedown', startElement, false);
 canvas.addEventListener('mouseup', endElement, false);
@@ -50,6 +51,7 @@ function startElement (e) {
 function endElement (e) {
     endX = Math.round(e.clientX - rect.left - borderWidth);
     endY = Math.round(e.clientY - rect.top - borderWidth);
+    empty_markdown = 0;
 
     switch (selectionMode)
     {
@@ -90,17 +92,20 @@ function endElement (e) {
 
 function sendMarkdown () {
     // TODO: better path building
-    var id = window.location.pathname;
-    var target = "/image" + id + "/markdown";
-    var xmlhttp = new XMLHttpRequest();
-    var markdown = JSON.stringify(elements);
+    if (!empty_markdown)
+    {
+    	var id = window.location.pathname;
+    	var target = "/image" + id + "/markdown";
+    	var xmlhttp = new XMLHttpRequest();
+    	var markdown = JSON.stringify(elements);
 
-    xmlhttp.open('POST', target, true);
-    xmlhttp.setRequestHeader('content-type', 'application/json');
-    xmlhttp.setRequestHeader('content-length', markdown.length);
-    xmlhttp.send(markdown);
+    	xmlhttp.open('POST', target, true);
+    	xmlhttp.setRequestHeader('content-type', 'application/json');
+    	xmlhttp.setRequestHeader('content-length', markdown.length);
+    	xmlhttp.send(markdown);
 
-    // TODO: check response ({msg: "ok"})
+    	// TODO: check response ({msg: "ok"})
+    }
 }
 
 function setSelectionMode (mode) {
