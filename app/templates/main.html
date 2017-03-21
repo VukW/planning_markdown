@@ -57,18 +57,18 @@
   		</div>
 	</div>
 
-	{% block scripts %}
-        {{ super() }}
-        <script src="{{url_for('.static', filename='engine.js')}}"></script>
-        <script>
-            var imageObj = new Image();
-            imageObj.onload = function () {
-                context.drawImage(imageObj, 0, 0, canvas.width, canvas.height);
-            };
-            imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
-        </script>
-	{% endblock %}
-
     <p id="mode">Selection mode: NONE</p>
     <p id="coords"></p>
+{% endblock %}
+
+{% block scripts %}
+	{{ super() }}
+	<script src="{{url_for('.static', filename='engine.js')}}"></script>
+	<script>
+		var imageObj = new Image();
+		imageObj.onload = function () {
+			context.drawImage(imageObj, 0, 0, canvas.width, canvas.height);
+		};
+		imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
+	</script>
 {% endblock %}
