@@ -17,29 +17,22 @@
 				</div>
 				<div>
 					<center>
-                        <div class="btn-group-vertical">
-							{#
-                            {% for button in buttons %}
-                                <button type="button" class="btn btn-default" id="{{ button.id }}">
-									{{ button.name }}
-								</button>
-                            {% endfor %}
-							#}
-                            <p><button type="button" class="btn btn-default" id="point">Point</button></p>
-                            <p>
-                                <button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">
-                                    Segment
-                                </button>
-                            </p>
-                            <!--
-                            <div id="segment-opts" class="collapse">
-                                <div class="checkbox">
-                                    <label><input type="checkbox" value="">Along the axes</label>
-                                </div>
-                            </div>
-                            -->
-                            <p><button type="button" class="btn btn-default" id="region">Region</button></p>
-                        </div>
+            			<div class="btn-group-vertical">
+	                		<p>
+	                    		<button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">
+	                        		Segment
+	                    		</button>
+		                	</p>
+		                	<!--
+		                	<div id="segment-opts" class="collapse">
+		                    	<div class="checkbox">
+		                        	<label><input type="checkbox" value="">Along the axes</label>
+		                    	</div>
+			                </div>
+			                -->
+		            	    <p><button type="button" class="btn btn-default" id="region">Region</button></p>
+							<p><button type="button" class="btn btn-default" id="polyline">Polyline</button></p>
+        			    </div>
 					</center>
 				</div>
 			</div>
@@ -52,22 +45,11 @@
   		<div class="col-md-2">
   			<div class="panel panel-success">
   				<div class="panel-heading">
-  					Elements you've marked down
+  					Markdown contents
   				</div>
   				<div>
-  					<ul class="list-group">
-                        {#
-                        {% for item in group_items %}
-                            show list of items of certain category determined by a clicked button
-                        {% endblock %}
-                        #}
-  						<li class="list-group-item">Point #2</li>
-  						<li class="list-group-item">Segment #2</li>
-  						<li class="list-group-item">Region #1</li>
-  						<li class="list-group-item">Segment #1</li>
-  						<li class="list-group-item">Point #1</li>
-  					</ul>
-                    <a href="{{url_for('main', image_id = image_id_next)}}" role="button" class="btn btn-success" id="next">
+  					<ul class="list-group"></ul>
+                    <a href="{{url_for('main', image_id = image_id_next)}}" role="button" class="btn btn-success sharp" id="next">
                         <span class="glyphicon glyphicon-ok"></span><strong> Next</strong>
                     </a>
   				</div>
@@ -87,5 +69,6 @@
         </script>
 	{% endblock %}
 
-    Next image URL: {{url_for('main', image_id = image_id_next)}}
+    <p id="mode">Selection mode: NONE</p>
+    <p id="coords"></p>
 {% endblock %}
