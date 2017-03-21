@@ -5,7 +5,7 @@ var elementTypes = {
     POLYLINE: 3
 };
 var modeNames = ['NONE', 'SEGMENT', 'REGION', 'POLYLINE'];
-var defaultColors = ['black', 'red', 'green', 'blue'];
+var defaultColors = ['black', '#8000FF', '#22FF00', '#00BCFF'];
 
 var mousebtn = {
     LEFT: 1,
@@ -13,17 +13,21 @@ var mousebtn = {
     RIGHT: 3
 }
 
-var canvas = document.getElementById("image-editor");
+var markCanvas = document.getElementById("image-editor");
+var animCanvas = document.getElementById("animation");
 var segmentButton = document.getElementById("segment");
 var regionButton = document.getElementById("region");
 var polylineButton = document.getElementById("polyline");
 var nextButton = document.getElementById("next");
 
-var context = canvas.getContext("2d");
+var markContext = markCanvas.getContext("2d");
+var animContext = animCanvas.getContext("2d");
+markContext.lineWidth = 4;
+animContext.lineWidth = 4;
 var selectionMode = elementTypes.NONE;
 
-var prevX, prevY, currX, currY, draw = 0;
-var rect = canvas.getBoundingClientRect();
+var prevX = -1, prevY = -1, currX, currY;
+var rect = markCanvas.getBoundingClientRect();
 var borderWidth = 1, pointRadius = 4;
 var deleteButtonHTML = '<button class="btn btn-default"><strong>X</strong></button>'
 var empty_markdown = 1, callCounter = 0;
@@ -37,11 +41,11 @@ if (elements.length > 0) {
 }
 */
 
-canvas.addEventListener('mouseup', clickProcessing, false);
-canvas.addEventListener('contextmenu', function (e) {
+animCanvas.addEventListener('mouseup', clickProcessing, false);
+animCanvas.addEventListener('contextmenu', function (e) {
     e.preventDefault();
-    // tempCanvas.width = tempCanvas.width;
-    // tempCanvas.removeEventListener('mousemove', follow, false);
+    animCanvas.width = animCanvas.width;
+    animCanvas.removeEventListener('mousemove', follow, false);
     prevX = -1;
     prevY = -1;
     return false;
@@ -57,41 +61,62 @@ polylineButton.addEventListener('click', function () {
 }, false);
 nextButton.addEventListener('click', sendMarkdown, false);
 
-// FIX: somehow this function is called twice for each click on the canvas
 function clickProcessing (e) {
-    callCounter++;
-    console.log(callCounter);
     if (e.which == mousebtn.LEFT) {
         currX = Math.round(e.clientX - rect.left - borderWidth);
         currY = Math.round(e.clientY - rect.top - borderWidth);
 
-        if (draw) {
+        if ((prevX != -1) && (prevY != -1)) {
             switch (selectionMode) {
                 case elementTypes.SEGMENT:
-                    drawLine(prevX, prevY, currX, currY, 'red');
-                    draw = 0;
+                    drawLine(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
                     // elements.push({type: segment, path: linePath([startX, startY, endX, endY])});
+
+                    prevX = -1;
+                    prevY = -1;
+                    animCanvas.removeEventListener('mousemove', follow, false);
                     break;
                 case elementTypes.REGION:
-                    drawRect(prevX, prevY, currX, currY, 'green');
-                    draw = 0;
-                    // elements.region.push({type: region, path: rectPath()});
+                    drawRect(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
+                    // elements.push({type: region, path: rectPath([start])});
+
+                    prevX = -1;
+                    prevY = -1;
+                    animCanvas.removeEventListener('mousemove', follow, false);
                     break;
                 case elementTypes.POLYLINE:
-                    drawLine(prevX, prevY, currX, currY, 'blue');
+                    drawLine(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
                     // elements.push({type: polyline, path: linePath([startX, startY, endX, endY])});
+
+                    prevX = currX;
+                    prevY = currY;
                     break;
             }
         } else {
-            draw = 1;
-            // addEventListener for animation
+            prevX = currX;
+            prevY = currY;
+            animCanvas.addEventListener('mousemove', follow, false);
         }
 
-        prevX = currX;
-        prevY = currY;
         // $("ul").append('<li class="list-group-item"> New item' + deleteButtonHTML + '</li');
-    } else {
-        return false;
+    }
+}
+
+// TODO: line should be thicker (may be)
+function follow (e) {
+    animCanvas.width = animCanvas.width;
+
+    mouseX = e.clientX - rect.left - borderWidth;
+    mouseY = e.clientY - rect.top - borderWidth;
+
+    switch (selectionMode) {
+        case elementTypes.SEGMENT:
+        case elementTypes.POLYLINE:
+            drawLine(animContext, prevX, prevY, mouseX, mouseY, defaultColors[selectionMode]);
+            break;
+        case elementTypes.REGION:
+            drawRect(animContext, prevX, prevY, mouseX, mouseY, defaultColors[selectionMode]);
+            break;
     }
 }
 
@@ -118,7 +143,7 @@ function setSelectionMode (mode) {
     document.getElementById("mode").innerHTML = 'Selection mode:' + modeNames[selectionMode];
 }
 
-function drawPoint (pointX, pointY, radius, pointColor) {
+function drawPoint (context, pointX, pointY, radius, pointColor) {
     context.fillStyle = pointColor;
     context.beginPath();
     context.arc(pointX, pointY, radius, 0, 2 * Math.PI, true);
@@ -126,7 +151,7 @@ function drawPoint (pointX, pointY, radius, pointColor) {
     context.fill();
 }
 
-function drawLine (startX, startY, endX, endY, lineColor) {
+function drawLine (context, startX, startY, endX, endY, lineColor) {
     if (!((startX == endX) && (startY == endY))) {
         context.strokeStyle = lineColor;
         context.beginPath();
@@ -137,7 +162,7 @@ function drawLine (startX, startY, endX, endY, lineColor) {
     }
 }
 
-function drawRect (startX, startY, endX, endY, lineColor) {
+function drawRect (context, startX, startY, endX, endY, lineColor) {
     if (!((startX == endX) || (startY == endY))) {
         context.strokeStyle = lineColor;
         var left = Math.min(startX, endX);

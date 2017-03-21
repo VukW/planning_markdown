@@ -1,6 +1,17 @@
+#canvas-container {
+    position: relative;
+}
+
 canvas {
     border: 1px solid #d3d3d3;
     cursor: crosshair;
+    position: absolute;
+    z-index: 0;
+}
+
+#animation {
+    position: absolute;
+    z-index: 1;
 }
 
 a {
