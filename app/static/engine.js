@@ -6,15 +6,12 @@ var elementTypes = {
 };
 var modeNames = ['NONE', 'SEGMENT', 'REGION', 'POLYLINE'];
 var defaultColors = ['black', '#8000FF', '#22FF00', '#00BCFF'];
+var LEFT_MOUSE_BUTTON = 1;
+var LINE_WIDTH = 4;
 
-var mousebtn = {
-    LEFT: 1,
-    MIDDLE: 2,
-    RIGHT: 3
-}
-
-var markCanvas = document.getElementById("image-editor");
+var markCanvas = document.getElementById("markdown");
 var animCanvas = document.getElementById("animation");
+var activeCanvas = document.getElementById("active-element");
 var segmentButton = document.getElementById("segment");
 var regionButton = document.getElementById("region");
 var polylineButton = document.getElementById("polyline");
@@ -22,30 +19,45 @@ var nextButton = document.getElementById("next");
 
 var markContext = markCanvas.getContext("2d");
 var animContext = animCanvas.getContext("2d");
-markContext.lineWidth = 4;
-animContext.lineWidth = 4;
 var selectionMode = elementTypes.NONE;
 
-var prevX = -1, prevY = -1, currX, currY;
+var prevX = -1, prevY = -1, currX, currY, polyline_points = [];
 var rect = markCanvas.getBoundingClientRect();
-var borderWidth = 1, pointRadius = 4;
-var deleteButtonHTML = '<button class="btn btn-default"><strong>X</strong></button>'
-var empty_markdown = 1, callCounter = 0;
+var borderWidth = 1, pointRadius = 4, current_id = 0;
 var elements = {};
 
-/*
-if (elements.length > 0) {
-    for (var i = 0; i < elements.length; i++) {
-        // отрисовка уже размеченных объектов
-    }
+function formPattern (lineColor) {
+    var pattern = document.createElement("canvas");
+    p.width = 8;
+    p.height = 8;
+    var patternContext = pattern.getContext("2d");
+
+    patternContext.strokeStyle = lineColor;
+    patternContext.lineWidth = 2;
+    patternContext.beginPath();
+    patternContext.moveTo(8, 0);
+    patternContext.lineTo(0, 8);
+    patternContext.closePath();
+    patternContext.stroke();
+
+    return pattern;
 }
-*/
 
 animCanvas.addEventListener('mouseup', clickProcessing, false);
 animCanvas.addEventListener('contextmenu', function (e) {
     e.preventDefault();
-    animCanvas.width = animCanvas.width;
     animCanvas.removeEventListener('mousemove', follow, false);
+    clearAll(animCanvas);
+    if ((selectionMode == elementTypes.POLYLINE) && (polyline_points.length > 1)) {
+        var description = '(' + polyline_points[0].x + ', ' + polyline_points[0].y + ') ... (' +
+                          polyline_points.slice(-1)[0].x + ', ' + polyline_points.slice(-1)[0].y + ')';
+        $("ul").append('<li class="list-group-item"> Polyline<br><span class="coords">' + description + '</span>' + deleteButtonHTML(current_id) + '</li');
+        elements[current_id] = {type: "polyline", path: polyline_points};
+        current_id++;
+        // document.getElementById("mode").innerHTML = JSON.stringify(elements);
+    }
+
+    polyline_points = [];
     prevX = -1;
     prevY = -1;
     return false;
@@ -61,50 +73,74 @@ polylineButton.addEventListener('click', function () {
 }, false);
 nextButton.addEventListener('click', sendMarkdown, false);
 
+$(".list-group").on('click', '.delete-element', function(){
+    var id = this.id;
+    $(this).closest('.list-group-item').remove();
+
+    delete elements[id];
+    // document.getElementById("mode").innerHTML = JSON.stringify(elements);
+    clearAll(markCanvas);
+    drawAll(markContext);
+});
+
 function clickProcessing (e) {
-    if (e.which == mousebtn.LEFT) {
+    if (e.which == LEFT_MOUSE_BUTTON) {
         currX = Math.round(e.clientX - rect.left - borderWidth);
         currY = Math.round(e.clientY - rect.top - borderWidth);
 
         if ((prevX != -1) && (prevY != -1)) {
             switch (selectionMode) {
                 case elementTypes.SEGMENT:
-                    drawLine(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
-                    // elements.push({type: segment, path: linePath([startX, startY, endX, endY])});
+                    if (!((currX == prevX) && (currY == prevY))) {
+                        var info = drawLine(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
+                        elements[current_id] = {type: "segment", path: info[0]};
+                        $("ul").append('<li class="list-group-item"> Segment<br><span class="coords">' + info[1] + '</span>' + deleteButtonHTML(current_id) + '</li>');
+                        current_id++;
+                    }
 
                     prevX = -1;
                     prevY = -1;
                     animCanvas.removeEventListener('mousemove', follow, false);
+                    clearAll(animCanvas);
                     break;
                 case elementTypes.REGION:
-                    drawRect(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
-                    // elements.push({type: region, path: rectPath([start])});
+                    if (!((currX == prevX) || (currY == prevY))) {
+                        var info = drawRect(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
+                        elements[current_id] = {type: "region", path: info[0]};
+                        $("ul").append('<li class="list-group-item"> Region<br><span class="coords">' + info[1] + '</span>' + deleteButtonHTML(current_id) + '</li>');
+                        current_id++;
+                    }
 
                     prevX = -1;
                     prevY = -1;
                     animCanvas.removeEventListener('mousemove', follow, false);
+                    clearAll(animCanvas);
                     break;
                 case elementTypes.POLYLINE:
-                    drawLine(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
-                    // elements.push({type: polyline, path: linePath([startX, startY, endX, endY])});
+                    if (!((currX == prevX) && (currY == prevY))) {
+                        drawLine(markContext, prevX, prevY, currX, currY, defaultColors[selectionMode]);
+                        polyline_points.push({x: currX, y: currY});
 
-                    prevX = currX;
-                    prevY = currY;
+                        prevX = currX;
+                        prevY = currY;
+                    }
                     break;
             }
+            // document.getElementById("mode").innerHTML = JSON.stringify(elements);
         } else {
             prevX = currX;
             prevY = currY;
+            if (selectionMode == elementTypes.POLYLINE) {
+                polyline_points.push({x: currX, y: currY});
+            }
             animCanvas.addEventListener('mousemove', follow, false);
         }
-
-        // $("ul").append('<li class="list-group-item"> New item' + deleteButtonHTML + '</li');
     }
 }
 
 // TODO: line should be thicker (may be)
 function follow (e) {
-    animCanvas.width = animCanvas.width;
+    clearAll(animCanvas);
 
     mouseX = e.clientX - rect.left - borderWidth;
     mouseY = e.clientY - rect.top - borderWidth;
@@ -122,7 +158,7 @@ function follow (e) {
 
 function sendMarkdown () {
     // TODO: better path building
-    if (!empty_markdown)
+    if (Object.keys(elements).length > 0)
     {
     	var id = window.location.pathname;
     	var target = "/image" + id + "/markdown";
@@ -140,35 +176,69 @@ function sendMarkdown () {
 
 function setSelectionMode (mode) {
     selectionMode = mode;
-    document.getElementById("mode").innerHTML = 'Selection mode:' + modeNames[selectionMode];
+    document.getElementById("mode").innerHTML = modeNames[selectionMode];
 }
 
 function drawPoint (context, pointX, pointY, radius, pointColor) {
     context.fillStyle = pointColor;
-    context.beginPath();
     context.arc(pointX, pointY, radius, 0, 2 * Math.PI, true);
-    context.closePath();
     context.fill();
 }
 
 function drawLine (context, startX, startY, endX, endY, lineColor) {
-    if (!((startX == endX) && (startY == endY))) {
-        context.strokeStyle = lineColor;
-        context.beginPath();
-        context.moveTo(startX, startY);
-        context.lineTo(endX, endY);
-        context.closePath();
+    context.strokeStyle = lineColor;
+    context.lineWidth = LINE_WIDTH;
+    context.lineCap = "round";
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
+    context.stroke();
+    return [[{x: startX, y: startY}, {x: endX, y: endY}],
+            '(' + startX + ', ' + startY + ') - (' + endX + ', ' + endY + ')'];
+}
+
+function drawRect (context, startX, startY, endX, endY, lineColor) {
+    context.strokeStyle = lineColor;
+    context.lineWidth = LINE_WIDTH;
+    context.lineCap = "round";
+    var left = Math.min(startX, endX);
+    var top = Math.min(startY, endY);
+    var width = Math.abs(endX - startX);
+    var height = Math.abs(endY - startY);
+    context.strokeRect(left, top, width, height);
+    return [[{x: left, y: top}, {x: left + width, y: top},
+            {x: left + width, y: top + height}, {x: left, y: top + height}, {x: left, y: top}],
+            '(' + left + ', ' + top + ') - ' + width + 'x' + height];
+}
+
+function drawAll (context) {
+    for (var id in elements) {
+        switch (elements[id].type) {
+            case "segment":
+                selectionMode = elementTypes.SEGMENT;
+                break;
+            case "region":
+                selectionMode = elementTypes.REGION;
+                break;
+            case "polyline":
+                selectionMode = elementTypes.POLYLINE;
+                break;
+        }
+        context.strokeStyle = defaultColors[selectionMode];
+        context.lineWidth = LINE_WIDTH;
+        context.lineCap = "round";
+        context.moveTo(elements[id].path[0].x, elements[id].path[0].y);
+        for (var number = 1; number < elements[id].path.length; number++) {
+            context.lineTo(elements[id].path[number].x, elements[id].path[number].y);
+        }
         context.stroke();
     }
 }
 
-function drawRect (context, startX, startY, endX, endY, lineColor) {
-    if (!((startX == endX) || (startY == endY))) {
-        context.strokeStyle = lineColor;
-        var left = Math.min(startX, endX);
-        var top = Math.min(startY, endY);
-        var width = Math.abs(endX - startX);
-        var height = Math.abs(endY - startY);
-        context.strokeRect(left, top, width, height);
-    }
+function clearAll (canvas) {
+    canvas.width = canvas.width;
+}
+
+function deleteButtonHTML (id) {
+    return '<button class="btn btn-default delete-element" id="' + id +
+           '"><span class="glyphicon glyphicon-remove"></span></button>';
 }

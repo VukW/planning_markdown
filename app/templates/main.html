@@ -37,13 +37,15 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-md-8 canvas-container">
-			<canvas id="image-editor" width="800" height="600">
+		<div class="col-md-7 canvas-container">
+			<canvas id="image" width="800" height="600">
 				Your browser does not support the HTML5 canvas tag.
 			</canvas>
-			<canvas id="animation" width="800" height="600"></canvas>
+			<canvas id="markdown" width="800" height="600"></canvas>
+            <canvas id="active-element" width="800" height="600"></canvas>
+            <canvas id="animation" width="800" height="600"></canvas>
 		</div>
-  		<div class="col-md-2">
+  		<div class="col-md-3">
   			<div class="panel panel-success">
   				<div class="panel-heading">
   					Markdown contents
@@ -66,9 +68,11 @@
 	{{ super() }}
 	<script src="{{url_for('.static', filename='engine.js')}}"></script>
 	<script>
+	    var imageCanvas = document.getElementById("image");
+	    var imageContext = imageCanvas.getContext("2d");
 		var imageObj = new Image();
 		imageObj.onload = function () {
-			markContext.drawImage(imageObj, 0, 0, markCanvas.width, markCanvas.height);
+			imageContext.drawImage(imageObj, 0, 0, imageCanvas.width, imageCanvas.height);
 		};
 		imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
 	</script>
