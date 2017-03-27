@@ -1,11 +1,11 @@
 {% extends "bootstrap/base.html" %}
 {% block title %}
-    Marking image {{image_id}}
+    Marking image {{ image_id }}
 {% endblock %}
 
 {% block styles %}
     {{ super() }}
-    <link rel="stylesheet" href="{{url_for('.static', filename='style.css')}}">
+    <link rel="stylesheet" href="{{ url_for('.static', filename='style.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -66,7 +66,10 @@
 
 {% block scripts %}
 	{{ super() }}
-	<script src="{{url_for('.static', filename='engine.js')}}"></script>
+    <script>
+        elements = JSON.parse('{{ markdown|tojson }}');
+    </script>
+	<script src="{{ url_for('.static', filename='engine.js') }}"></script>
 	<script>
 	    var imageCanvas = document.getElementById("image");
 	    var imageContext = imageCanvas.getContext("2d");
@@ -74,6 +77,6 @@
 		imageObj.onload = function () {
 			imageContext.drawImage(imageObj, 0, 0, imageCanvas.width, imageCanvas.height);
 		};
-		imageObj.src = '{{url_for('get_image', image_id=image_id)}}';
+		imageObj.src = '{{ url_for('get_image', image_id=image_id) }}';
 	</script>
 {% endblock %}

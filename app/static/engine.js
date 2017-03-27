@@ -5,7 +5,7 @@ var elementTypes = {
     POLYLINE: 3
 };
 var modeNames = ['NONE', 'SEGMENT', 'REGION', 'POLYLINE'];
-var defaultColors = ['black', '#8000FF', '#22FF00', '#00BCFF'];
+var defaultColors = ['black', '#ffed79', '#5ce032', '#00BCFF'];
 var LEFT_MOUSE_BUTTON = 1;
 var LINE_WIDTH = 4;
 
@@ -24,7 +24,8 @@ var selectionMode = elementTypes.NONE;
 var prevX = -1, prevY = -1, currX, currY, polyline_points = [];
 var rect = markCanvas.getBoundingClientRect();
 var borderWidth = 1, pointRadius = 4, current_id = 0;
-var elements = {};
+
+drawAll(markContext);
 
 function formPattern (lineColor) {
     var pattern = document.createElement("canvas");
@@ -166,7 +167,7 @@ function sendMarkdown () {
     	var markdown = JSON.stringify(elements);
 
     	xmlhttp.open('POST', target, true);
-    	xmlhttp.setRequestHeader('content-type', 'application/json');
+    	xmlhttp.setRequestHeader('content-type', 'application/json; charset=UTF-8');
     	xmlhttp.setRequestHeader('content-length', markdown.length);
     	xmlhttp.send(markdown);
 
@@ -176,7 +177,7 @@ function sendMarkdown () {
 
 function setSelectionMode (mode) {
     selectionMode = mode;
-    document.getElementById("mode").innerHTML = modeNames[selectionMode];
+    document.getElementById("mode").innerHTML = 'Selection mode: ' + modeNames[selectionMode];
 }
 
 function drawPoint (context, pointX, pointY, radius, pointColor) {
@@ -189,8 +190,11 @@ function drawLine (context, startX, startY, endX, endY, lineColor) {
     context.strokeStyle = lineColor;
     context.lineWidth = LINE_WIDTH;
     context.lineCap = "round";
+    context.lineJoin = "round";
+    context.beginPath();
     context.moveTo(startX, startY);
     context.lineTo(endX, endY);
+    context.closePath();
     context.stroke();
     return [[{x: startX, y: startY}, {x: endX, y: endY}],
             '(' + startX + ', ' + startY + ') - (' + endX + ', ' + endY + ')'];
@@ -226,10 +230,13 @@ function drawAll (context) {
         context.strokeStyle = defaultColors[selectionMode];
         context.lineWidth = LINE_WIDTH;
         context.lineCap = "round";
+        context.lineJoin = "round";
+        context.beginPath();
         context.moveTo(elements[id].path[0].x, elements[id].path[0].y);
         for (var number = 1; number < elements[id].path.length; number++) {
             context.lineTo(elements[id].path[number].x, elements[id].path[number].y);
         }
+        context.closePath();
         context.stroke();
     }
 }
