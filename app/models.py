@@ -60,6 +60,13 @@ def load_image_from_url(url):
     return img
 
 
+def transform_image(image, angle=None, borders=None):
+    image = image.convert('L')  # to grayscale
+    image, angle = rotate_image(image, angle=angle)  # optimal rotating
+    image, borders = crop_image(image, borders=borders)
+    return image, angle, borders
+
+
 def resize_image(image, max_dimension):
     ratio = min(max_dimension / image.size[0], max_dimension / image.size[1])
     return image.resize((int(image.size[0] * ratio),
@@ -85,7 +92,6 @@ def rotate_image(image, angle=None):
                 criteria[axis] = sum_over_axis[-1] - sum_over_axis[0]
             else:
                 criteria[axis] = 1000000
-        # print('angle: ', angle, 'shape: ', image_array.shape, ', ', criteria)
         return min(criteria)
 
     print('basic image: ', image.size)
@@ -120,20 +126,6 @@ def rotate_image(image, angle=None):
         max_point = (np.argmin(crit) + ROTATION_N_TO_SPLIT - np.argmin(crit[::-1])) // 2
         opt_angle = angles[max_point]
         opt_criteria = crit[max_point]
-
-        # bruteforce
-        # opt_angle = None
-        # opt_criteria = 1000000
-        # start = dt.now()
-        # times = []
-        # for angle in range(-45, 45, 1):
-        #     crit = rotating_criteria(angle)
-        #     if crit < opt_criteria:
-        #         opt_criteria = crit
-        #         opt_angle = angle
-        #     times.append((dt.now() - start).total_seconds()*1000)
-        #     start = dt.now()
-        # print('time: {0:.3f}..{1:.3f}, mean = {2:.3f}'.format(np.min(times), np.max(times), np.mean(times)))
 
         print('opt_angle: ', opt_angle, ', criteria: ', opt_criteria)
     else:
@@ -202,14 +194,12 @@ class ImageToMark:
             # self._image = random_image(self.image_id)
             self._image = load_image_from_url(self.url)
             # self._image = resize_image(self._image, 400)
-            self._image = self._image.convert('L')  # to grayscale
-
             angle = db.get_full_item(self.image_id).get('angle', None)
-            self._image, angle = rotate_image(self._image, angle = angle)  # optimal rotating
-            db.get_full_item(self.image_id)['angle'] = angle
-
             borders = db.get_full_item(self.image_id).get('borders', None)
-            self._image, borders = crop_image(self._image, borders = borders)
+            (self._image,
+             angle,
+             borders) = transform_image(self._image, angle=angle, borders=borders)
+            db.get_full_item(self.image_id)['angle'] = angle
             db.get_full_item(self.image_id)['borders'] = borders
 
         return self._image

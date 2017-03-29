@@ -71,14 +71,6 @@ def main(image_id):
                            markdown=images[image_id].markdown)
 
 
-@app.route('/ls/<path:varargs>')
-def ls(varargs=None):
-    if varargs == '0':
-        varargs = ''
-    varargs = '/' + varargs
-    return jsonify(listdir(varargs))
-
-
 @app.route('/object_types')
 def object_types():
     return jsonify(OBJECT_TYPES)
