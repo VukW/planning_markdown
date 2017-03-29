@@ -1,10 +1,20 @@
 from flask import Flask
 from flask_bootstrap import Bootstrap
 import json
+from datetime import datetime
 from config import DB_FILE_PATH, DB_INIT_URLS_LIST
 
 app = Flask(__name__)
 Bootstrap(app)
+
+
+def json_datetime_serialize(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime):
+        # serial = obj.isoformat()
+        # return serial
+        return None
+    raise TypeError("Type not serializable")
 
 
 class DbJson:
@@ -43,7 +53,7 @@ class DbJson:
 
     def save(self):
         with open(DB_FILE_PATH, 'w') as f:
-            print(json.dumps(self.db_json_dict), file=f)
+            print(json.dumps(self.db_json_dict, default=json_datetime_serialize), file=f)
 
     def init_from_urls(self, file_path):
         current_urls = set([self.db_json_dict[key].get('url', None) for key in self.db_json_dict])

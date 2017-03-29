@@ -22,7 +22,8 @@ def get_image(image_id):
 
 def get_next_image_id(start=-1):
     for image_id in range(start + 1, 1000000):
-        if images[image_id].markdown == {}:
+        image = images[image_id]
+        if (not image.locked) and (image.markdown == {}):
             return image_id
 
 
@@ -44,10 +45,12 @@ def next_image_id_offset(start_id):
 
 @app.route('/image/<int:image_id>/markdown', methods=['GET', 'POST'])
 def already_saved_markdown(image_id):
+    image = images[image_id]
     if request.method == 'GET':
-        return jsonify(images[image_id].markdown)
+        return jsonify(image.markdown)
     elif request.method == 'POST':
-        images[image_id].markdown = request.get_json(force=True)
+        image.markdown = request.get_json(force=True)
+        image.remove_lock()
     return jsonify(msg="ok")
 
 
@@ -64,11 +67,13 @@ def root():
 
 @app.route('/<int:image_id>')
 def main(image_id):
+    image = images[image_id]
+    image.set_lock()
     return render_template("main.html",
                            image_id=image_id,
                            image_id_prev=image_id - 1 if image_id > 0 else None,
                            image_id_next=get_next_image_id(image_id),
-                           markdown=images[image_id].markdown)
+                           markdown=image.markdown)
 
 
 @app.route('/object_types')

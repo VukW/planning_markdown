@@ -6,10 +6,11 @@ from PIL import ImageDraw, Image, ImageFont
 from PIL.ImageOps import invert
 from urllib.request import urlopen
 import numpy as np
+from datetime import datetime as dt
 from config import (CROP_MIN_MAX_GAP,
                     CROP_SIGNIFICANT_MEAN,
                     ROTATION_N_TO_SPLIT,
-                    ROTATION_RESIZING_LEVELS)
+                    ROTATION_RESIZING_LEVELS, LOCKED_TIME_SECONDS)
 
 
 def random_image(seed):
@@ -207,6 +208,23 @@ class ImageToMark:
     @property
     def url(self):
         return db.get_full_item(self.image_id)['url']
+
+    def set_lock(self):
+        db.get_full_item(self.image_id)['lock_time'] = dt.now()
+
+    def remove_lock(self):
+        db.get_full_item(self.image_id).pop('lock_time', None)
+
+    @property
+    def locked(self):
+        lock_time = db.get_full_item(self.image_id).get('lock_time', None)
+        if lock_time is not None:
+            if (dt.now() - lock_time).seconds > LOCKED_TIME_SECONDS:
+                self.remove_lock()
+                return False
+            else:
+                return True
+        return False
 
 
 class ImagesToMark:

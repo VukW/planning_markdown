@@ -13,6 +13,8 @@ OBJECT_TYPES = [{'name': 'my_point',
                  'color': '#00CCCC',
                  'basic_type': 'REGION'}]
 
+LOCKED_TIME_SECONDS = 600
+
 # =============
 # DB
 DB_FILE_PATH = 'saved_markdowns.json'
