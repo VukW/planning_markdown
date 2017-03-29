@@ -6,6 +6,7 @@ from config import DB_FILE_PATH, DB_INIT_URLS_LIST
 
 app = Flask(__name__)
 Bootstrap(app)
+app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
 
 def json_datetime_serialize(obj):
