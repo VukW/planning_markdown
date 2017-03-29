@@ -1,4 +1,5 @@
 PORT = 8000
+DEBUG = True
 
 OBJECT_TYPES = [{'name': 'my_point',
                  'color': '#00FF00',
