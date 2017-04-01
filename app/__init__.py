@@ -54,13 +54,16 @@ class DbJson:
 
     def save(self):
         with open(DB_FILE_PATH, 'w') as f:
-            print(json.dumps(self.db_json_dict, default=json_datetime_serialize), file=f)
+            print(json.dumps(self.db_json_dict,
+                             default=json_datetime_serialize,
+                             indent=4,
+                             sort_keys=True), file=f)
 
     def init_from_urls(self, file_path):
         current_urls = set([self.db_json_dict[key].get('url', None) for key in self.db_json_dict])
         with open(file_path, 'r') as f:
             for line in f.readlines():
-                if line in current_urls:
+                if line.strip() in current_urls:
                     continue
                 new_image_id = self.generate_next_id()
                 self.db_json_dict[str(new_image_id)] = {"url": line.strip()}
