@@ -1,8 +1,59 @@
+#canvas-container {
+    position: relative;
+}
+
+.delete-element {
+    padding: 2px;
+    display: none;
+    border: none;
+    background-color: transparent;
+    position: relative;
+    float: right;
+    color: rgb(240, 15, 15);
+    vertical-align: center;
+}
+
+.delete-element:hover {
+    background-color: transparent;
+    color: rgb(240, 15, 15);
+}
+
+.delete-element:click {
+    background-color: transparent;
+}
+
+.coords {
+    font-family: "Lucida Console", sans-serif;
+}
+
+.list-group-item:hover button {
+    display: inline;
+}
+
 canvas {
     border: 1px solid #d3d3d3;
     cursor: crosshair;
+    position: absolute;
+    z-index: 0;
+}
+
+#markdown {
+    z-index: 1;
+}
+
+#active-element {
+    z-index: 2;
+}
+
+#animation {
+    position: relative;
+    z-index: 3;
 }
 
 a {
     width: 100%;
+}
+
+.sharp {
+	border-radius: 0;
 }
