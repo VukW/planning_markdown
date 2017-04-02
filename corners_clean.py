@@ -40,22 +40,25 @@ if __name__ == '__main__':
                 prev_point = points_counter
                 points_counter += 1
 
-        # clean data:
-        # for each pair of edges, search for intersection
-        get_all_intersections(old_points, old_edges)
+        # =======================
+        # clean the data:
+        # 1. add all intersections between edges
+        new_points, new_edges = add_all_intersections(old_points, old_edges)
+        # 2. cluster points
+        # 3. transform edges with transformation dict
+        clustered_points, transformation_dict = cluster_points(new_points)
+        new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
+        # 4. for every point we seek for the nearest edge and link it here
+        new_points, new_edges = link_points_to_nearest_edge(clustered_points, new_edges)
+        # 5, 6. repeat clustering
+        clustered_points, transformation_dict = cluster_points(new_points)
+        new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
+        # cleaning finished
+        # =======================
 
-        # clean data: cluster points, build new edges
-        clustered_points, points_transform_clustering = cluster_points(old_points)
-        for point_from in old_edges:
-            old_edges[ic] = (points_transform_clustering[edge[0]], points_transform_clustering[edge[1]])
-        # transform edges into the dict:
-        # {%points_num_from%: [%list of points_num_to%]}
-        new_edges = {}
-
-        edges = modify_edges(edges)
-
+        # save
         clustered_db_json[image_id]['clustered'] = {'points': clustered_points,
-                                                    'edges': edges}
+                                                    'edges': new_edges}
 
         # image = load_image_from_url(db_json[image_id])
         if ic >= 10:
