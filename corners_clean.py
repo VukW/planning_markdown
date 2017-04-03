@@ -95,8 +95,8 @@ if __name__ == '__main__':
         web_service_new_db_json[image_id]['markdown'] = new_markdown
 
         # image = load_image_from_url(db_json[image_id])
-        if ic >= 10:
-            break
+        # if ic >= 10:
+        #     break
 
     with open(DB_FILE_PATH + '.clustered', 'w') as f:
         print(json.dumps(clustered_only_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)

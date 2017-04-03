@@ -2,8 +2,8 @@ import numpy as np
 
 HARDCODED_HEIGHT = 600
 HARDCODED_WIDTH = 800
-CLUSTERING_DIST = 7
-EPS_ZERO = 1e-2
+CLUSTERING_DIST = 10
+EPS_ZERO = 1e-3
 
 # ======
 # utils
@@ -180,8 +180,13 @@ def real_intersect(edge1, edge2):
         # ребра почти параллельны
         norming_sign = np.sign(cosine_similarity)
 
-        # TODO: вычисление расстояния работает неправильно между почти параллельными ребрами.
-        if np.abs(line1[2] / norm1 - norming_sign * line2[2] / norm2) > CLUSTERING_DIST:
+        dist_between_edges = min([
+            dist_point_to_edge(edge1[0], edge2[0], edge2[1])[0],
+            dist_point_to_edge(edge1[1], edge2[0], edge2[1])[0],
+            dist_point_to_edge(edge2[0], edge1[0], edge1[1])[0],
+            dist_point_to_edge(edge2[1], edge1[0], edge1[1])[0]
+        ])
+        if dist_between_edges > CLUSTERING_DIST:
             # ребра параллельны, но на разных линиях
             return []
         # ребра лежат на одной линии
