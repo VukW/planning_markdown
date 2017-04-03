@@ -3,58 +3,19 @@ import numpy as np
 HARDCODED_HEIGHT = 600
 HARDCODED_WIDTH = 800
 CLUSTERING_DIST = 7
-EPS_ZERO = 1e-5
+EPS_ZERO = 1e-2
+
+# ======
+# utils
+# ======
 
 
 def dist(point1, point2):
     return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
 
-def cluster_points(points):
-    """Объединяет рядом лежащие точки в единый кластер"""
-    # points = points_to_2d(points)
-    clusters = []  # list of lists
-    for point1 in points:
-        new_cluster = [point1]
-        for ic in range(len(clusters)):
-            cluster = clusters[ic]
-            for point2 in cluster:
-                if dist(point1, point2) < CLUSTERING_DIST:
-                    new_cluster += cluster
-                    clusters[ic] = []
-                    break
-        clusters.append(new_cluster)
-    clustered_points = []
-    points_transform_clustering = {}
-    for cluster in clusters:
-        if len(cluster) == 0:
-            continue
-        cluster_mean = np.mean(cluster, axis=0)
-        clustered_points.append(cluster_mean)
-        for point in cluster:
-            points_transform_clustering[point] = cluster_mean
-    return clustered_points, points_transform_clustering
-
-
-def transform_edges(old_points, old_edges, new_points, transformation_dict):
-
-    def new_point_pos(old_point):
-        return new_points.index(transformation_dict[old_points[old_point]])
-
-    new_edges = {}
-    for point_from in old_edges:
-        new_point_from = new_point_pos(point_from)
-        if new_point_from not in new_edges:
-            new_edges[new_point_from] = set()
-        for ic in range(len(old_edges[point_from])):
-            point_to = old_edges[point_from][ic]
-            new_point_to = new_point_pos(point_to)
-            if new_point_to != new_point_from:
-                new_edges[new_point_from].add(new_point_to)
-
-    for point_from in new_edges:
-        new_edges[point_from] = list(new_edges[point_from])
-    return new_edges
+def list_to_tuple(lst):
+    return tuple(int(round(e)) for e in lst)
 
 
 def edges_dict_to_list(edges_dict):
@@ -72,8 +33,8 @@ def edges_list_to_dict(edges_list):
         for point in [edge['from'], edge['to']]:
             if point not in edges_dict:
                 edges_dict[point] = []
-        edges_dict[edge['from']] += edge['to']
-        edges_dict[edge['to']] += edge['from']
+        edges_dict[edge['from']].append(edge['to'])
+        edges_dict[edge['to']].append(edge['from'])
     return edges_dict
 
 
@@ -82,8 +43,54 @@ def line_from_two_points(point1, point2):
     x2, y2 = point2
     a = y2 - y1
     b = - (x2 - x1)
-    c = y1(x2 - x1) - x1(y2 - y1)
+    c = y1 * (x2 - x1) - x1 * (y2 - y1)
     return a, b, c
+
+
+def cluster_points(points):
+    """Объединяет рядом лежащие точки в единый кластер"""
+    clusters = []  # list of lists
+    for point1 in points:
+        new_cluster = [point1]
+        for ic in range(len(clusters)):
+            cluster = clusters[ic]
+            for point2 in cluster:
+                if dist(point1, point2) < CLUSTERING_DIST:
+                    new_cluster += cluster
+                    clusters[ic] = []
+                    break
+        clusters.append(new_cluster)
+    clustered_points = []
+    points_transform_clustering = {}
+    for cluster in clusters:
+        if len(cluster) == 0:
+            continue
+        cluster_mean = list_to_tuple(np.mean(cluster, axis=0))
+        clustered_points.append(cluster_mean)
+        for point in cluster:
+            points_transform_clustering[point] = cluster_mean
+    return clustered_points, points_transform_clustering
+
+
+def transform_edges(old_points, old_edges, new_points, transformation_dict):
+    def new_point_pos(old_point):
+        return new_points.index(transformation_dict[old_points[old_point]])
+
+    new_edges = {}
+    for ic in range(len(new_points)):
+        new_edges[ic] = set()
+    for point_from in old_edges:
+        new_point_from = new_point_pos(point_from)
+        for ic in range(len(old_edges[point_from])):
+            point_to = old_edges[point_from][ic]
+            new_point_to = new_point_pos(point_to)
+            if new_point_to != new_point_from:
+                new_edges[new_point_from].add(new_point_to)
+                new_edges[new_point_to].add(new_point_from)
+
+    for point_from in new_edges:
+        new_edges[point_from] = list(new_edges[point_from])
+    return new_edges
 
 
 def dist_point_to_edge(point, edge_start, edge_end):
@@ -94,7 +101,7 @@ def dist_point_to_edge(point, edge_start, edge_end):
         # ребро на самом деле - одна точка
         return dist(edge_start, point), edge_start
 
-    nearest_point = ((b*(b*x0 - a*y0) - a*c) / (a**2 + b**2),
+    nearest_point = ((b * (b * x0 - a * y0) - a * c) / (a ** 2 + b ** 2),
                      (a * (-b * x0 + a * y0) - b * c) / (a ** 2 + b ** 2))
     dist_ = dist(point, nearest_point)
     if np.dot([nearest_point[0] - edge_start[0],
@@ -102,14 +109,14 @@ def dist_point_to_edge(point, edge_start, edge_end):
               [nearest_point[0] - edge_end[0],
                nearest_point[1] - edge_end[1]]) > 0:
         # nearest point is out of start and end
-        dist_tmp = dist(point, edge_start)
-        if dist_tmp < dist_:
-            nearest_point = edge_start
+        dist_ = dist(point, edge_start)
+        nearest_point = edge_start
         dist_tmp = dist(point, edge_end)
         if dist_tmp < dist_:
             nearest_point = edge_end
+            dist_ = dist_tmp
 
-    return dist_, tuple(np.round(nearest_point).astype(int))
+    return dist_, list_to_tuple(nearest_point)
 
 
 def link_points_to_nearest_edge(points, edges):
@@ -120,56 +127,57 @@ def link_points_to_nearest_edge(points, edges):
 
     new_points = points.copy()
     edges_splits = [[{'pos': e['to'],
-                     'dist_to_start': dist(new_points[e['from']], new_points[e['to']])}] for e in edges_list]
+                      'dist_to_start': dist(new_points[e['from']], new_points[e['to']])}] for e in edges_list]
     transformation_dict = {}
 
     # seek nearest edge for each point
     for ic, point in enumerate(new_points):
-        opt_dist = 1000
+        opt_dist = CLUSTERING_DIST
         opt_edge = None
         opt_point = None
         for jc, edge in enumerate(edges_list):
-            dist_to_edge, new_point = dist_point_to_edge(new_points[point],
+            if ic in [edge['from'], edge['to']]:
+                continue
+            dist_to_edge, new_point = dist_point_to_edge(point,
                                                          new_points[edge['from']],
                                                          new_points[edge['to']])
-            if dist_to_edge < opt_dist:
+            if dist_to_edge <= opt_dist:
                 opt_dist = dist_to_edge
                 opt_edge = jc
                 opt_point = new_point
         if opt_edge is not None:
-            transformation_dict[point] = opt_point
-        edges_splits[opt_edge].append({'pos': ic,
-                                       'dist_to_start': dist(point,
-                                                             new_points[edges_list[opt_edge]['from']])})
+            transformation_dict[ic] = opt_point
+            edges_splits[opt_edge].append({'pos': ic,
+                                           'dist_to_start': dist(point,
+                                                                 new_points[edges_list[opt_edge]['from']])})
 
     for edge_splits in edges_splits:
         edge_splits.sort(key=lambda x: x['dist_to_start'])
 
     # splitting edges..
     new_edges = []
-    for edge, edge_splits in zip(edges, edges_splits):
+    for edge, edge_splits in zip(edges_list, edges_splits):
         prev_point = edge['from']
         for edge_split in edge_splits:
             new_edges.append({'from': prev_point, 'to': edge_split['pos']})
+            prev_point = edge_split['pos']
 
     # update point positions according to
-    for point in transformation_dict:
-        new_points[point] = transformation_dict[point]
+    for ic in transformation_dict:
+        new_points[ic] = transformation_dict[ic]
 
-    return new_points, new_edges
-
-# def intersect(edge1, edge2):
-#     """Определяет точку пересечения двух ребер. Пересечение не обязательно реально
-#     (если конец одного из ребер почти лежит на втором ребре, но формально ребра не пересекаются)"""
-#     return (0, 1)
+    return new_points, edges_list_to_dict(new_edges)
 
 
 def real_intersect(edge1, edge2):
+    """находит пересечение двух ребер, если такое есть. Возвращает список из 0..2 точек"""
     line1 = line_from_two_points(edge1[0], edge1[1])
     line2 = line_from_two_points(edge2[0], edge2[1])
-    if np.abs(line1[0] * line2[1] - line2[0] * line1[1]) < EPS_ZERO:
+    norm1 = np.linalg.norm(line1[:2])
+    norm2 = np.linalg.norm(line2[:2])
+    if np.dot(line1[:2], line2[:2]) / (norm1 * norm2) > 1 - EPS_ZERO:
         # ребра почти параллельны
-        if np.abs(line1[2] - line2[2]) > EPS_ZERO:
+        if np.abs(line1[2] / norm1 - line2[2] / norm2) > CLUSTERING_DIST:
             # ребра параллельны, но на разных линиях
             return []
         # ребра лежат на одной линии
@@ -179,9 +187,19 @@ def real_intersect(edge1, edge2):
 
     full_mat = np.array([line1, line2])
     det = np.linalg.det(full_mat[:, [0, 1]])
-    x = np.linalg.det(full_mat[:, [1, 2]]) / det
-    y = np.linalg.det(full_mat[:, [0, 2]]) / det
-    return [tuple(np.round((x, y)))]
+    x = - np.linalg.det(full_mat[:, [2, 1]]) / det
+    y = - np.linalg.det(full_mat[:, [0, 2]]) / det
+    intersection_point = list_to_tuple([x, y])
+
+    # проверим, что точка на самом деле лежит на обоих ребрах
+    if ((np.dot(np.array(intersection_point) - np.array(edge1[0]),
+                np.array(intersection_point) - np.array(edge1[1])) < 0)
+        and
+            (np.dot(np.array(intersection_point) - np.array(edge2[0]),
+                    np.array(intersection_point) - np.array(edge2[1])) < 0)):
+        return [intersection_point]
+    else:
+        return []
 
 
 def add_all_intersections(old_points, old_edges):
@@ -191,11 +209,11 @@ def add_all_intersections(old_points, old_edges):
     edges_splits = [[] for _ in range(len(edges))]
 
     for ic, edge1 in enumerate(edges):
-        for jc, edge2 in enumerate(edges[ic:]):
+        for jc, edge2 in enumerate(edges[ic + 1:]):
             intersection_points = real_intersect([new_points[edge1['from']],
-                                                 new_points[edge1['to']]],
-                                                [new_points[edge2['from']],
-                                                 new_points[edge2['to']]])
+                                                  new_points[edge1['to']]],
+                                                 [new_points[edge2['from']],
+                                                  new_points[edge2['to']]])
             if len(intersection_points) == 0:
                 # пересечений нет
                 continue
@@ -210,9 +228,11 @@ def add_all_intersections(old_points, old_edges):
                         intersection_point_pos = new_points.index(intersection_point)
 
                     edges_splits[ic].append({'pos': intersection_point_pos,
-                                             'dist_to_start': dist(intersection_point, new_points[edge1['from']])})
-                    edges_splits[jc].append({'pos': intersection_point_pos,
-                                             'dist_to_start': dist(intersection_point, new_points[edge2['from']])})
+                                             'dist_to_start': dist(intersection_point,
+                                                                   new_points[edge1['from']])})
+                    edges_splits[ic + jc + 1].append({'pos': intersection_point_pos,
+                                                      'dist_to_start': dist(intersection_point,
+                                                                            new_points[edge2['from']])})
         edges_splits[ic].append({'pos': edge1['to'],
                                  'dist_to_start': dist(new_points[edge1['to']],
                                                        new_points[edge1['from']])})
@@ -224,17 +244,6 @@ def add_all_intersections(old_points, old_edges):
         prev_point = edge['from']
         for edge_split in edge_splits:
             new_edges.append({'from': prev_point, 'to': edge_split['pos']})
+            prev_point = edge_split['pos']
 
     return new_points, edges_list_to_dict(new_edges)
-
-# def modify_edges(edges):
-#     """если какая-то точка лежит на уже существующем ребре (или очень близка), то
-#     точка перемещается на ребро; ребро разбивается на 2 новых"""
-#     points_transform_edges = {}
-#     for edge1 in edges:
-#         for edge2 in edges:
-#             point_intersecting = intersect(edge1, edge2)
-#             if point_intersecting is None:
-#                 continue
-#     pass
-#

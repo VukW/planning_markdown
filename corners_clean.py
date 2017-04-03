@@ -8,14 +8,26 @@ from tqdm import tqdm
 transformed_images_folder = '../images'
 
 
+def json_int_serialize(obj):
+    if isinstance(obj, int):
+        # serial = obj.isoformat()
+        # return serial
+        return str(obj)
+    raise TypeError("Type not serializable")
+
+
 if __name__ == '__main__':
+    np.random.seed(123)
     # read db file
+    DB_FILE_PATH = "test2.json"
     with open(DB_FILE_PATH, 'r') as f_to_read_json:
         db_json = json.loads(f_to_read_json.read())
     clustered_db_json = {}
 
     # for every point
-    for ic, image_id in tqdm(enumerate(db_json)):
+    keys = sorted(list(db_json.keys()))
+    # for ic, image_id in tqdm(enumerate(db_json)):
+    for ic, image_id in tqdm(enumerate(keys)):
         # get markdown
         markdown = db_json[image_id].get('markdown', {})
         if markdown == {}:
@@ -57,12 +69,12 @@ if __name__ == '__main__':
         # =======================
 
         # save
-        clustered_db_json[image_id]['clustered'] = {'points': clustered_points,
-                                                    'edges': new_edges}
+        clustered_db_json[image_id] = {'clustered': {'points': clustered_points,
+                                                    'edges': new_edges}}
 
         # image = load_image_from_url(db_json[image_id])
         if ic >= 10:
             break
 
     with open(DB_FILE_PATH + '.clustered', 'w') as f:
-        print(json.dumps(clustered_db_json, indent=4, sort_keys=True), file=f)
+        print(json.dumps(clustered_db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
