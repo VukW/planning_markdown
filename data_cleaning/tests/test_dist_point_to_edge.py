@@ -1,5 +1,5 @@
 from unittest import TestCase
-from data_cleaning import dist_point_to_edge
+from data_cleaning.graph import dist_point_to_edge
 
 
 class TestDist_point_to_edge_horizontal(TestCase):

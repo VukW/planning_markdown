@@ -1,11 +1,10 @@
-from app.models import transform_image, load_image_from_url
-from data_cleaning import *
-from config import DB_FILE_PATH
-from PIL import Image
 import json
-from tqdm import tqdm
-
-transformed_images_folder = '../images'
+import numpy as np
+from PIL import Image
+from config import DB_FILE_PATH
+from data_cleaning.graph import cluster_points, transform_edges, link_points_to_nearest_edge, add_all_intersections
+from app.models import load_image_from_url, transform_image
+from data_cleaning.images import  save_corners, save_image, transform_corners
 
 
 def json_int_serialize(obj):
@@ -25,7 +24,7 @@ if __name__ == '__main__':
     # for every point
     keys = sorted(list(db_json.keys()))
     # for ic, image_id in tqdm(enumerate(db_json)):
-    for ic, image_id in tqdm(enumerate(keys)):
+    for ic, image_id in enumerate(keys):
         # get markdown
         markdown = db_json[image_id].get('markdown', {})
         if markdown == {}:
@@ -70,7 +69,6 @@ if __name__ == '__main__':
         # save
         clustered_only_json[image_id] = {'clustered': {'points': clustered_points,
                                                        'edges': new_edges}}
-
         # save as db-markdown
         web_service_new_db_json[image_id] = db_json[image_id]
         new_markdown = {}
@@ -94,13 +92,19 @@ if __name__ == '__main__':
 
         web_service_new_db_json[image_id]['markdown'] = new_markdown
 
-        # image = load_image_from_url(db_json[image_id])
-        # if ic >= 10:
-        #     break
+        # load image, transform, save corners
+        image = load_image_from_url(db_json[image_id]['url'])
+        image = transform_image(image, db_json[image_id]['angle'], db_json[image_id]['borders'])[0]
+        save_image(image, image_id)
+        resized_clustered_points = transform_corners(clustered_points, db_json[image_id]['borders'])
+        save_corners(image, image_id, resized_clustered_points)
 
+    # saving cleaned jsons
+    # clustered format
     with open(DB_FILE_PATH + '.clustered', 'w') as f:
         print(json.dumps(clustered_only_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
 
-    # save clean graph as db-markdown (for web service)
+    # save clean graph as db-markdown format (for web service)
     with open(DB_FILE_PATH + '-cleaned.json', 'w') as f:
         print(json.dumps(web_service_new_db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
+

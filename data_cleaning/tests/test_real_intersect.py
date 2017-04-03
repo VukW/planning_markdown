@@ -1,5 +1,5 @@
 from unittest import TestCase
-from data_cleaning import real_intersect, dist_point_to_edge
+from data_cleaning.graph import real_intersect
 
 
 class TestReal_intersect(TestCase):
