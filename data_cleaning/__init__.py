@@ -193,10 +193,10 @@ def real_intersect(edge1, edge2):
 
     # проверим, что точка на самом деле лежит на обоих ребрах
     if ((np.dot(np.array(intersection_point) - np.array(edge1[0]),
-                np.array(intersection_point) - np.array(edge1[1])) < 0)
+                np.array(intersection_point) - np.array(edge1[1])) <= 0)
         and
             (np.dot(np.array(intersection_point) - np.array(edge2[0]),
-                    np.array(intersection_point) - np.array(edge2[1])) < 0)):
+                    np.array(intersection_point) - np.array(edge2[1])) <= 0)):
         return [intersection_point]
     else:
         return []
