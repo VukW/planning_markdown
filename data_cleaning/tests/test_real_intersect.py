@@ -36,6 +36,12 @@ class TestReal_intersect(TestCase):
         edge2 = [(78, 205), (434, 207)]
         self.assertEqual(real_intersect(edge1, edge2), edge2)
 
+    def test_interaction_parallel_16(self):
+        # лежат близко друг к другу: первая поглощает вторую, но разнонаправлены
+        edge1 = [(40, 201), (718, 201)]
+        edge2 = [(434, 207), (78, 205)]
+        self.assertEqual(real_intersect(edge1, edge2), edge2[::-1])
+
     def test_interaction_parallel_7(self):
         # лежат близко друг к другу: общий кусок
         edge1 = [(150, 201), (718, 201)]

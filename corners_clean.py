@@ -10,8 +10,6 @@ transformed_images_folder = '../images'
 
 def json_int_serialize(obj):
     if isinstance(obj, int):
-        # serial = obj.isoformat()
-        # return serial
         return str(obj)
     raise TypeError("Type not serializable")
 
@@ -19,10 +17,10 @@ def json_int_serialize(obj):
 if __name__ == '__main__':
     np.random.seed(123)
     # read db file
-    DB_FILE_PATH = "test2.json"
     with open(DB_FILE_PATH, 'r') as f_to_read_json:
         db_json = json.loads(f_to_read_json.read())
-    clustered_db_json = {}
+    clustered_only_json = {}
+    web_service_new_db_json = {}
 
     # for every point
     keys = sorted(list(db_json.keys()))
@@ -40,7 +38,8 @@ if __name__ == '__main__':
         old_edges = {}
 
         points_counter = 0
-        for md_object in markdown.values():
+        for md_index in sorted(markdown.keys()):
+            md_object = markdown[md_index]
             prev_point = None
             for point in md_object['path']:
                 point_tpl = (point['x'], point['y'])
@@ -69,12 +68,39 @@ if __name__ == '__main__':
         # =======================
 
         # save
-        clustered_db_json[image_id] = {'clustered': {'points': clustered_points,
-                                                    'edges': new_edges}}
+        clustered_only_json[image_id] = {'clustered': {'points': clustered_points,
+                                                       'edges': new_edges}}
+
+        # save as db-markdown
+        web_service_new_db_json[image_id] = db_json[image_id]
+        new_markdown = {}
+        segment_counter = 0
+        for point_from in new_edges:
+            for point_to in new_edges[point_from]:
+                if point_to < point_from:
+                    continue
+                new_markdown[str(segment_counter)] = {"type": "segment",
+                                                      "path": [
+                                                          {
+                                                              "x": clustered_points[point_from][0],
+                                                              "y": clustered_points[point_from][1]
+                                                          },
+                                                          {
+                                                              "x": clustered_points[point_to][0],
+                                                              "y": clustered_points[point_to][1]
+                                                          }
+                                                      ]}
+                segment_counter += 1
+
+        web_service_new_db_json[image_id]['markdown'] = new_markdown
 
         # image = load_image_from_url(db_json[image_id])
         if ic >= 10:
             break
 
     with open(DB_FILE_PATH + '.clustered', 'w') as f:
-        print(json.dumps(clustered_db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
+        print(json.dumps(clustered_only_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
+
+    # save clean graph as db-markdown (for web service)
+    with open(DB_FILE_PATH + '-cleaned.json', 'w') as f:
+        print(json.dumps(web_service_new_db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)

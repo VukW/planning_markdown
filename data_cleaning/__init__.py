@@ -175,9 +175,13 @@ def real_intersect(edge1, edge2):
     line2 = line_from_two_points(edge2[0], edge2[1])
     norm1 = np.linalg.norm(line1[:2])
     norm2 = np.linalg.norm(line2[:2])
-    if np.dot(line1[:2], line2[:2]) / (norm1 * norm2) > 1 - EPS_ZERO:
+    cosine_similarity = np.dot(line1[:2], line2[:2]) / (norm1 * norm2)
+    if np.abs(cosine_similarity) > 1 - EPS_ZERO:
         # ребра почти параллельны
-        if np.abs(line1[2] / norm1 - line2[2] / norm2) > CLUSTERING_DIST:
+        norming_sign = np.sign(cosine_similarity)
+
+        # TODO: вычисление расстояния работает неправильно между почти параллельными ребрами.
+        if np.abs(line1[2] / norm1 - norming_sign * line2[2] / norm2) > CLUSTERING_DIST:
             # ребра параллельны, но на разных линиях
             return []
         # ребра лежат на одной линии
