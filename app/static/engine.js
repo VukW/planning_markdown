@@ -3,8 +3,8 @@
 //     - image_src - URL of the image
 
 // TODO:
-//   - dragging
 //   - highlighting element on corresponding <li> hover
+//   - key bindings
 
 var elementTypes = {
     NONE: 0,
@@ -12,14 +12,22 @@ var elementTypes = {
     REGION: 2,
     POLYLINE: 3
 };
+var keys = {
+    SHIFT: 16,
+    Z: 0,
+    X: 0,
+    C: 0,
+    SPACE: 40
+};
 var elementNames = ['', 'Segment', 'Region', 'Polyline'];
 var defaultColors = ['black', '#ffed79', '#5ce032', '#00BCFF'];
 var LEFT_MOUSE_BUTTON = 1, LINE_WIDTH = 4, RELATIVE_SCALE = 0.25;
-var MIN_POSSIBLE_SCALE = 0.2, MAX_POSSIBLE_SCALE = 5;
+var MIN_POSSIBLE_SCALE = 0.2, MAX_POSSIBLE_SCALE = 5, POINT_RADIUS = 8;
 
 var selectionMode = elementTypes.NONE;
-var prev = new Point(-1, -1), curr, innerOffset, outerOffset, polyline_points = [];
-var borderWidth = 1, pointRadius = 4, scale, current_id = 0;
+var prev = new Point(-1, -1), curr;
+var innerOffset, outerOffset, polyline_points = [];
+var scale, current_id = 0, drag = 0;
 
 var imageCanvas = document.getElementById("image");
 var imageContext = imageCanvas.getContext("2d");
@@ -28,6 +36,8 @@ var markContext = markCanvas.getContext("2d");
 var animCanvas = document.getElementById("animation");
 var animContext = animCanvas.getContext("2d");
 var activeCanvas = document.getElementById("active-element");
+var activeContext = activeCanvas.getContext("2d");
+
 var segmentButton = document.getElementById("segment");
 var regionButton = document.getElementById("region");
 var polylineButton = document.getElementById("polyline");
@@ -41,10 +51,31 @@ imageObj.onload = function () {
     outerOffset = new Point(rect.left, rect.top);
     var initialScale = Math.min(imageCanvas.width / imageObj.width, imageCanvas.height / imageObj.height);
     scale = initialScale;
-    redraw(scale, true);
+    innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
+    redraw(true);
 }
 imageObj.src = image_src;
 
+document.addEventListener('keydown', function (e) {
+    if (e.which == keys.SHIFT) {
+        drag = 1;
+    }
+}, false);
+
+document.addEventListener('keyup', function (e) {
+    switch (e.which) {
+        case keys.SHIFT:
+            drag = 0;
+            break;
+        // other key bindings
+    }
+})
+
+animCanvas.addEventListener('mousedown', function (e) {
+    if (drag) {
+        prev = coords(e);
+    }
+}, false);
 animCanvas.addEventListener('mouseup', clickProcessing, false);
 animCanvas.addEventListener('contextmenu', function (e) {
     e.preventDefault();
@@ -58,6 +89,7 @@ animCanvas.addEventListener('contextmenu', function (e) {
     }
 
     polyline_points = [];
+    clearCanvas(activeCanvas);
     prev.x = -1;
     prev.y = -1;
     return false;
@@ -73,14 +105,16 @@ polylineButton.addEventListener('click', function () {
 }, false);
 nextButton.addEventListener('click', sendMarkdown, false);
 zoomOutButton.addEventListener('click', function () {
+    innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
     if (scale < MAX_POSSIBLE_SCALE)
         scale /= (1 + RELATIVE_SCALE);
-    redraw(scale, false);
+    redraw(false);
 }, false);
 zoomInButton.addEventListener('click', function () {
+    innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
     if (scale > MIN_POSSIBLE_SCALE)
         scale *= (1 + RELATIVE_SCALE);
-    redraw(scale, false);
+    redraw(false);
 }, false);
 
 function clickProcessing (e) {
@@ -88,49 +122,77 @@ function clickProcessing (e) {
         curr = coords(e);
 
         if ((prev.x != -1) && (prev.y != -1)) {
-            switch (selectionMode) {
-                case elementTypes.SEGMENT:
-                    if (!((curr.x == prev.x) && (curr.y == prev.y))) {
-                        var info = drawLine(markContext, prev, curr, defaultColors[selectionMode], true);
-                        elements[current_id] = {type: "segment", path: info};
-                        $("ul").append(generateLi(current_id));
-                        current_id++;
-                    }
+            if (drag) {
+                innerOffset.x += (curr.x - prev.x);
+                innerOffset.y += (curr.y - prev.y);
+                redraw(false);
 
-                    prev.x = -1;
-                    prev.y = -1;
-                    animCanvas.removeEventListener('mousemove', follow, false);
-                    clearCanvas(animCanvas);
-                    break;
-                case elementTypes.REGION:
-                    if (!((curr.x == prev.x) || (curr.y == prev.y))) {
-                        var info = drawRect(markContext, prev, curr, defaultColors[selectionMode], true);
-                        elements[current_id] = {type: "region", path: info};
-                        $("ul").append(generateLi(current_id));
-                        current_id++;
-                    }
+                prev.x = -1;
+                prev.y = -1;
+            } else {
+                switch (selectionMode) {
+                    case elementTypes.SEGMENT:
+                        if (!((curr.x == prev.x) && (curr.y == prev.y))) {
+                            var info = drawLine(markContext, prev, curr, defaultColors[selectionMode], true);
+                            elements[current_id] = {type: "segment", path: info};
+                            $("ul").append(generateLi(current_id));
+                            current_id++;
+                        }
 
-                    prev.x = -1;
-                    prev.y = -1;
-                    animCanvas.removeEventListener('mousemove', follow, false);
-                    clearCanvas(animCanvas);
-                    break;
-                case elementTypes.POLYLINE:
-                    if (!((curr.x == prev.x) && (curr.y == prev.y))) {
-                        drawLine(markContext, prev, curr, defaultColors[selectionMode], true);
-                        polyline_points.push({x: curr.cs().x, y: curr.cs().y});
+                        prev.x = -1;
+                        prev.y = -1;
+                        animCanvas.removeEventListener('mousemove', follow, false);
+                        clearCanvas(animCanvas);
+                        break;
+                    case elementTypes.REGION:
+                        if (!((curr.x == prev.x) || (curr.y == prev.y))) {
+                            var info = drawRect(markContext, prev, curr, defaultColors[selectionMode], true);
+                            elements[current_id] = {type: "region", path: info};
+                            $("ul").append(generateLi(current_id));
+                            current_id++;
+                        }
 
-                        prev.x = curr.x;
-                        prev.y = curr.y;
-                    }
-                    break;
+                        prev.x = -1;
+                        prev.y = -1;
+                        animCanvas.removeEventListener('mousemove', follow, false);
+                        clearCanvas(animCanvas);
+                        break;
+                    case elementTypes.POLYLINE:
+                        if (!((curr.x == prev.x) && (curr.y == prev.y))) {
+                        /*
+                            console.log(curr.cs().x + ' ' + curr.cs().y);
+                            console.log(curr.cs().dist(polyline_points[0]));
+                            if (curr.cs().dist(polyline_points[0]) < POINT_RADIUS) {
+                                var beginning = new Point(polyline_points[0].x, polyline_points[0].y)
+                                drawLine(markContext, prev, beginning, defaultColors[selectionMode], true);
+                                polyline_points.push({x: polyline_points[0].x, y: polyline_points[0].y});
+
+                                $("ul").append(generateLi(current_id));
+                                elements[current_id] = {type: "polyline", path: polyline_points};
+                                current_id++;
+                                prev.x = -1;
+                                prev.y = -1;
+
+                                animCanvas.removeEventListener('mousemove', follow, false);
+                                clearCanvas(activeCanvas);
+                            } else {*/
+                                drawLine(markContext, prev, curr, defaultColors[selectionMode], true);
+                                polyline_points.push({x: curr.cs().x, y: curr.cs().y});
+
+                                prev.x = curr.x;
+                                prev.y = curr.y;
+                            // }
+                        }
+                        break;
+                }
+                // document.getElementById("mode").innerHTML = JSON.stringify(elements);
             }
-            // document.getElementById("mode").innerHTML = JSON.stringify(elements);
         } else {
             prev.x = curr.x;
             prev.y = curr.y;
             if (selectionMode == elementTypes.POLYLINE) {
                 polyline_points.push({x: curr.cs().x, y: curr.cs().y});
+                //drawPoint(activeContext, curr, POINT_RADIUS, defaultColors[elementTypes.POLYLINE]);
             }
             animCanvas.addEventListener('mousemove', follow, false);
         }
@@ -238,8 +300,8 @@ function drawAll (context, build_list) {
         for (var number = 1; number < elements[id].path.length; number++) {
             context.lineTo(elements[id].path[number].x, elements[id].path[number].y);
         }
-        context.closePath();
         context.stroke();
+        context.closePath();
 
         if (build_list) {
             $("ul").append(generateLi(id));
@@ -286,25 +348,23 @@ function generateLi (id) {
     return liHTML;
 }
 
-function redraw (scale, load) {
+function redraw (load) {
     imageCanvas.width = imageCanvas.width;
-    imageContext.setTransform(scale, 0, 0, scale, imageCanvas.width / 2, imageCanvas.height / 2);
+    imageContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
     imageContext.drawImage(imageObj, - imageObj.width / 2, - imageObj.height / 2);
 
     markCanvas.width = markCanvas.width;
-    markContext.setTransform(scale, 0, 0, scale, markCanvas.width / 2, markCanvas.height / 2);
+    markContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
     if (load) {
         drawAll(markContext, true);
     } else {
         drawAll(markContext, false);
     }
-
-    innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
 }
 
 function coords (e) {
-    x = e.pageX - outerOffset.x - borderWidth;
-    y = e.pageY - outerOffset.y - borderWidth;
+    x = e.pageX - outerOffset.x;
+    y = e.pageY - outerOffset.y;
     return new Point(x, y);
 }
 
@@ -324,5 +384,5 @@ Point.prototype.cs = function () {
 Point.prototype.dist = function (other) {
     dx = this.x - other.x;
     dy = this.y - other.y;
-    return Math.sqrt(x * x + y * y);
+    return Math.sqrt(dx * dx + dy * dy);
 }
