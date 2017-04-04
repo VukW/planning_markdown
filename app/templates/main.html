@@ -17,21 +17,19 @@
 				</div>
 				<div>
 					<center>
-            			<div class="btn-group-vertical">
-	                		<p>
-	                    		<button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">
-	                        		Segment
-	                    		</button>
-		                	</p>
-		                	<!--
+            			<div class="btn-group-vertical" data-toggle="buttons">
+                            <button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">
+	                        	Segment
+	                    	</button>
 		                	<div id="segment-opts" class="collapse">
 		                    	<div class="checkbox">
 		                        	<label><input type="checkbox" value="">Along the axes</label>
 		                    	</div>
 			                </div>
-			                -->
-		            	    <p><button type="button" class="btn btn-default" id="region">Region</button></p>
-							<p><button type="button" class="btn btn-default" id="polyline">Polyline</button></p>
+		            	    <button type="button" class="btn btn-default" id="region">Region</button>
+							<button type="button" class="btn btn-default" id="polyline">Polyline</button>
+							<button type="button" class="btn btn-default" id="zoom-in">Zoom In</button>
+							<button type="button" class="btn btn-default" id="zoom-out">Zoom Out</button>
         			    </div>
 					</center>
 				</div>
@@ -68,15 +66,7 @@
 	{{ super() }}
     <script>
         elements = JSON.parse('{{ markdown|tojson }}');
+        image_src = '{{ url_for('get_image', image_id=image_id) }}';
     </script>
 	<script src="{{ url_for('.static', filename='engine.js') }}"></script>
-	<script>
-	    var imageCanvas = document.getElementById("image");
-	    var imageContext = imageCanvas.getContext("2d");
-		var imageObj = new Image();
-		imageObj.onload = function () {
-			imageContext.drawImage(imageObj, 0, 0, imageCanvas.width, imageCanvas.height);
-		};
-		imageObj.src = '{{ url_for('get_image', image_id=image_id) }}';
-	</script>
 {% endblock %}
