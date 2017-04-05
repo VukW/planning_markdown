@@ -9,74 +9,66 @@
 {% endblock %}
 
 {% block content %}
-    <div class="row">
-		<div class="col-md-2">
-			<div class="panel panel-default">
-				<div class="panel-heading">
-					<h3 class="panel-title">Select an element to mark down</h3>
+	<div class="container-fluid">
+		<div class="row no-padding">
+			<div class="col-md-10 canvas-container">
+				<canvas id="image">
+					Your browser does not support the HTML5 canvas tag.
+				</canvas>
+				<canvas id="markdown"></canvas>
+				<canvas id="active-element"></canvas>
+				<canvas id="animation"></canvas>
+			</div>
+			<div class="col-md-2" style="height: 100%">
+                <div class="btn-toolbar sharp">
+					<div class="btn-group" data-toggle="buttons">
+						<label class="btn btn-default">
+							<input type="radio" name="mode" id="segment" autocomplete="off"> S
+						</label>
+						<label class="btn btn-default">
+							<input type="radio" name="mode" id="region" autocomplete="off"> R
+						</label>
+						<label class="btn btn-default">
+							<input type="radio" name="mode" id="polyline" autocomplete="off"> P
+						</label>
+						<label class="btn btn-default">
+							<input type="radio" name="mode" id="drag" autocomplete="off"> D
+						</label>
+						<br><center><span id="mode">Mode: NONE</span></center>
+					</div>
+					<div class="btn-group" data-toggle="buttons">
+						<button type="button" class="btn btn-default" id="zoom-out">
+							<span class="glyphicon glyphicon-minus"></span>
+						</button>
+						<button type="button" class="btn btn-default" id="zoom-in">
+							<span class="glyphicon glyphicon-plus"></span>
+						</button>
+						<br><center><span id="zoom">Zoom: 100%</span></center>
+					</div>
 				</div>
-				<div>
-					<center>
-            			<div class="btn-group-vertical">
-	                		<p>
-	                    		<button type="button" class="btn btn-default" data-toggle="collapse" data-target="#segment-opts" id="segment">
-	                        		Segment
-	                    		</button>
-		                	</p>
-		                	<!--
-		                	<div id="segment-opts" class="collapse">
-		                    	<div class="checkbox">
-		                        	<label><input type="checkbox" value="">Along the axes</label>
-		                    	</div>
-			                </div>
-			                -->
-		            	    <p><button type="button" class="btn btn-default" id="region">Region</button></p>
-							<p><button type="button" class="btn btn-default" id="polyline">Polyline</button></p>
-        			    </div>
-					</center>
+
+                <div class="panel panel-default" style="margin: 0!important; padding: 0!important">
+					<div class="panel-heading">
+						<div style="float: right"><span class="glyphicon glyphicon-trash"></span></div>
+						<div>Markdown contents</div>
+					</div>
+					<div class="list-container">
+						<ul class="list-group sharp"></ul>
+					</div>
 				</div>
+				<a href="{{url_for('main', image_id = image_id_next)}}" role="button" class="btn btn-success sharp" id="next">
+                    <span class="glyphicon glyphicon-ok"></span><strong> Next Image</strong>
+				</a>
 			</div>
 		</div>
-		<div class="col-md-7 canvas-container">
-			<canvas id="image" width="800" height="600">
-				Your browser does not support the HTML5 canvas tag.
-			</canvas>
-			<canvas id="markdown" width="800" height="600"></canvas>
-            <canvas id="active-element" width="800" height="600"></canvas>
-            <canvas id="animation" width="800" height="600"></canvas>
-		</div>
-  		<div class="col-md-3">
-  			<div class="panel panel-success">
-  				<div class="panel-heading">
-  					Markdown contents
-  				</div>
-  				<div>
-  					<ul class="list-group"></ul>
-                    <a href="{{url_for('main', image_id = image_id_next)}}" role="button" class="btn btn-success sharp" id="next">
-                        <span class="glyphicon glyphicon-ok"></span><strong> Next</strong>
-                    </a>
-  				</div>
-  			</div>
-  		</div>
 	</div>
-
-    <p id="mode">Selection mode: NONE</p>
-    <p id="coords"></p>
 {% endblock %}
 
 {% block scripts %}
 	{{ super() }}
     <script>
         elements = JSON.parse('{{ markdown|tojson }}');
+        image_src = '{{ url_for('get_image', image_id=image_id) }}';
     </script>
 	<script src="{{ url_for('.static', filename='engine.js') }}"></script>
-	<script>
-	    var imageCanvas = document.getElementById("image");
-	    var imageContext = imageCanvas.getContext("2d");
-		var imageObj = new Image();
-		imageObj.onload = function () {
-			imageContext.drawImage(imageObj, 0, 0, imageCanvas.width, imageCanvas.height);
-		};
-		imageObj.src = '{{ url_for('get_image', image_id=image_id) }}';
-	</script>
 {% endblock %}
