@@ -5,6 +5,7 @@
 // TODO:
 //   - highlighting element on corresponding <li> hover
 //   - key bindings
+//   - close polylines
 
 var elementTypes = {
     NONE: 0,
@@ -30,12 +31,20 @@ var innerOffset, outerOffset, polyline_points = [];
 var scale, current_id = 0, drag = 0;
 
 var imageCanvas = document.getElementById("image");
+imageCanvas.width = window.innerWidth * 5 / 6;
+imageCanvas.height = window.innerHeight;
 var imageContext = imageCanvas.getContext("2d");
 var markCanvas = document.getElementById("markdown");
+markCanvas.width = imageCanvas.width;
+markCanvas.height = imageCanvas.height;
 var markContext = markCanvas.getContext("2d");
 var animCanvas = document.getElementById("animation");
+animCanvas.width = imageCanvas.width;
+animCanvas.height = imageCanvas.height;
 var animContext = animCanvas.getContext("2d");
 var activeCanvas = document.getElementById("active-element");
+activeCanvas.width = imageCanvas.width;
+activeCanvas.height = imageCanvas.height;
 var activeContext = activeCanvas.getContext("2d");
 
 var segmentButton = document.getElementById("segment");
@@ -94,15 +103,20 @@ animCanvas.addEventListener('contextmenu', function (e) {
     prev.y = -1;
     return false;
 }, false);
-segmentButton.addEventListener('click', function () {
-	setSelectionMode(elementTypes.SEGMENT);
-}, false);
-regionButton.addEventListener('click', function () {
-	setSelectionMode(elementTypes.REGION);
-}, false);
-polylineButton.addEventListener('click', function () {
-	setSelectionMode(elementTypes.POLYLINE);
-}, false);
+
+$('input[name="mode"]:radio').change(function () {
+    switch (this.id) {
+        case "segment":
+            setSelectionMode(elementTypes.SEGMENT);
+            break;
+        case "region":
+            setSelectionMode(elementTypes.REGION);
+            break;
+        case "polyline":
+            setSelectionMode(elementTypes.POLYLINE);
+            break;
+    }
+});
 nextButton.addEventListener('click', sendMarkdown, false);
 zoomOutButton.addEventListener('click', function () {
     innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
@@ -235,7 +249,7 @@ function sendMarkdown () {
 
 function setSelectionMode (mode) {
     selectionMode = mode;
-    document.getElementById("mode").innerHTML = 'Selection mode: ' + elementNames[selectionMode];
+    document.getElementById("mode").innerHTML = 'Mode: ' + elementNames[selectionMode].toUpperCase();
 }
 
 function drawPoint (context, point, radius, pointColor) {
@@ -341,7 +355,7 @@ $(".list-group").on('click', '.delete-element', function(){
 });
 
 function generateLi (id) {
-    liHTML = '<li class="list-group-item">';
+    liHTML = '<li class="list-group-item ' + elementNames[selectionMode].toLowerCase() + '-item sharp">';
     liHTML += elementNames[selectionMode];
     liHTML += '<button class="btn btn-default delete-element" id="' + id +
               '"><span class="glyphicon glyphicon-remove"></span></button>'; + '</li>';
@@ -360,6 +374,8 @@ function redraw (load) {
     } else {
         drawAll(markContext, false);
     }
+
+    document.getElementById("zoom").innerHTML = 'Zoom: ' + Math.round(100 * scale) + '%';
 }
 
 function coords (e) {
