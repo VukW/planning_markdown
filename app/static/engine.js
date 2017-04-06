@@ -1,11 +1,10 @@
 //  Passed from Flask in 'main.html' template:
-//     - elements - container for markdown
+//     - elements - container for the markdown
 //     - image_src - URL of the image
 
 // TODO:
-//   - highlighting element on corresponding <li> hover
-//   - key bindings
 //   - close polylines
+//   - adding tags to marked elements
 
 var elementTypes = {
     NONE: 0,
@@ -15,13 +14,16 @@ var elementTypes = {
 };
 var keys = {
     SHIFT: 16,
-    Z: 0,
-    X: 0,
-    C: 0,
-    SPACE: 40
+    SPACE: 32,
+    UP: 38,
+    DOWN: 40,
+    C: 67,
+    X: 88,
+    Z: 90
 };
 var elementNames = ['', 'Segment', 'Region', 'Polyline'];
-var defaultColors = ['black', '#ffed79', '#5ce032', '#00BCFF'];
+var defaultColors = ['black', '#ffed79', '#5ce032', '#00bcff'];
+var auxiliaryColors = ['black', '#fff4ae', '#acf694', '#aee3f6'];
 var LEFT_MOUSE_BUTTON = 1, LINE_WIDTH = 4, RELATIVE_SCALE = 0.25;
 var MIN_POSSIBLE_SCALE = 0.2, MAX_POSSIBLE_SCALE = 5, POINT_RADIUS = 8;
 
@@ -34,22 +36,22 @@ var imageCanvas = document.getElementById("image");
 imageCanvas.width = window.innerWidth * 5 / 6;
 imageCanvas.height = window.innerHeight;
 var imageContext = imageCanvas.getContext("2d");
+
 var markCanvas = document.getElementById("markdown");
 markCanvas.width = imageCanvas.width;
 markCanvas.height = imageCanvas.height;
 var markContext = markCanvas.getContext("2d");
+
 var animCanvas = document.getElementById("animation");
 animCanvas.width = imageCanvas.width;
 animCanvas.height = imageCanvas.height;
 var animContext = animCanvas.getContext("2d");
+
 var activeCanvas = document.getElementById("active-element");
 activeCanvas.width = imageCanvas.width;
 activeCanvas.height = imageCanvas.height;
 var activeContext = activeCanvas.getContext("2d");
 
-var segmentButton = document.getElementById("segment");
-var regionButton = document.getElementById("region");
-var polylineButton = document.getElementById("polyline");
 var nextButton = document.getElementById("next");
 var zoomInButton = document.getElementById("zoom-in");
 var zoomOutButton = document.getElementById("zoom-out");
@@ -76,7 +78,27 @@ document.addEventListener('keyup', function (e) {
         case keys.SHIFT:
             drag = 0;
             break;
-        // other key bindings
+        case keys.C:
+            $("#polyline").click();
+            break;
+        case keys.X:
+            $("#region").click();
+            break;
+        case keys.Z:
+            $("#segment").click();
+            break;
+        case keys.SPACE:
+            e.preventDefault();
+            nextButton.click();
+            break;
+        case keys.UP:
+            e.preventDefault();
+            zoomInButton.click();
+            break;
+        case keys.DOWN:
+            e.preventDefault();
+            zoomOutButton.click();
+            break;
     }
 })
 
@@ -327,24 +349,38 @@ function clearCanvas (canvas) {
     canvas.width = canvas.width;
 }
 
-function formPattern (lineColor) {
-    var pattern = document.createElement("canvas");
-    pattern.width = 8;
-    pattern.height = 8;
-    var patternContext = pattern.getContext("2d");
+function highlight (id) {
+    activeContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
 
-    patternContext.strokeStyle = lineColor;
-    patternContext.lineWidth = 2;
-    patternContext.beginPath();
-    patternContext.moveTo(8, 0);
-    patternContext.lineTo(0, 8);
-    patternContext.closePath();
-    patternContext.stroke();
+    switch (elements[id].type) {
+        case "segment":
+            activeContext.strokeStyle = defaultColors[elementTypes.SEGMENT];
+            activeContext.fillStyle = auxiliaryColors[elementTypes.SEGMENT];
+            break;
+        case "region":
+            activeContext.strokeStyle = defaultColors[elementTypes.REGION];
+            activeContext.fillStyle = auxiliaryColors[elementTypes.REGION];
+            break;
+        case "polyline":
+            activeContext.strokeStyle = defaultColors[elementTypes.POLYLINE];
+            activeContext.fillStyle = auxiliaryColors[elementTypes.POLYLINE];
+            break;
+    }
 
-    return pattern;
+    activeContext.lineWidth = LINE_WIDTH;
+    activeContext.lineCap = "round";
+    activeContext.lineJoin = "round";
+    activeContext.beginPath();
+    activeContext.moveTo(elements[id].path[0].x, elements[id].path[0].y);
+    for (var number = 1; number < elements[id].path.length; number++) {
+        activeContext.lineTo(elements[id].path[number].x, elements[id].path[number].y);
+    }
+    activeContext.stroke();
+    activeContext.closePath();
+    activeContext.fill();
 }
 
-$(".list-group").on('click', '.delete-element', function(){
+$(".list-group").on('click', '.delete-element', function () {
     var id = this.id;
     $(this).closest('.list-group-item').remove();
 
@@ -352,6 +388,15 @@ $(".list-group").on('click', '.delete-element', function(){
     // document.getElementById("mode").innerHTML = JSON.stringify(elements);
     markContext.clearRect(-image.width / 2, -image.height / 2, image.width, image.height);
     drawAll(markContext, false);
+});
+
+$(".list-group").on('mouseenter', '.list-group-item', function () {
+    var id = $(this).children(".delete-element").attr("id");
+    highlight(id);
+});
+
+$(".list-group").on('mouseleave', '.list-group-item', function () {
+    clearCanvas(activeCanvas);
 });
 
 function generateLi (id) {

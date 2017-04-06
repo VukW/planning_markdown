@@ -67,8 +67,8 @@
 {% block scripts %}
 	{{ super() }}
     <script>
-        elements = JSON.parse('{{ markdown|tojson }}');
-        image_src = '{{ url_for('get_image', image_id=image_id) }}';
+        var elements = JSON.parse('{{ markdown|tojson }}');
+        var image_src = '{{ url_for('get_image', image_id=image_id) }}';
     </script>
 	<script src="{{ url_for('.static', filename='engine.js') }}"></script>
 {% endblock %}
