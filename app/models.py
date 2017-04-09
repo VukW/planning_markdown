@@ -5,6 +5,7 @@ import random
 from PIL import ImageDraw, Image, ImageFont
 from PIL.ImageOps import invert
 from urllib.request import urlopen
+import hashlib
 import numpy as np
 from datetime import datetime as dt
 from config import (CROP_MIN_MAX_GAP,
@@ -98,37 +99,39 @@ def rotate_image(image, angle=None):
     print('basic image: ', image.size)
 
     if angle is None:
+        # turn auto-rotating off
         # search optimal angle to rotate
-        current_resize_level = 0
-        angles = [-45.0]
-        angles += [0] * (ROTATION_N_TO_SPLIT - 1)
-        angles += [45.0]
-        crit = [None] * (ROTATION_N_TO_SPLIT + 1)
-        image_inverted = None
-        while (angles[-1] - angles[0]) > 0.1:
-            # отресайзим изображение, если надо
-            if current_resize_level != len(ROTATION_RESIZING_LEVELS):
-                if (angles[-1] - angles[0]) < ROTATION_RESIZING_LEVELS[current_resize_level]['angle_diff']:
-                    image_inverted = resize_image(invert(image), ROTATION_RESIZING_LEVELS[current_resize_level]['size'])
-                    current_resize_level += 1
-                    print('image inverted: ', image_inverted.size)
-                    crit[0] = rotating_criteria(image_inverted, angles[0])
-                    crit[-1] = rotating_criteria(image_inverted, angles[-1])
-
-            for ic in range(1, ROTATION_N_TO_SPLIT):
-                angles[ic] = angles[0] + (angles[-1] - angles[0]) * ic / ROTATION_N_TO_SPLIT
-                crit[ic] = rotating_criteria(image_inverted, angles[ic])
-            max_point = (np.argmin(crit) + ROTATION_N_TO_SPLIT - np.argmin(crit[::-1])) // 2
-            angles[0] = angles[max(max_point - 2, 0)]
-            angles[-1] = angles[min(max_point + 2, ROTATION_N_TO_SPLIT)]
-            crit[0] = crit[max(max_point - 2, 0)]
-            crit[-1] = crit[min(max_point + 2, ROTATION_N_TO_SPLIT)]
-            print('new borders: ', angles[0], angles[-1])
-        max_point = (np.argmin(crit) + ROTATION_N_TO_SPLIT - np.argmin(crit[::-1])) // 2
-        opt_angle = angles[max_point]
-        opt_criteria = crit[max_point]
-
-        print('opt_angle: ', opt_angle, ', criteria: ', opt_criteria)
+        # current_resize_level = 0
+        # angles = [-45.0]
+        # angles += [0] * (ROTATION_N_TO_SPLIT - 1)
+        # angles += [45.0]
+        # crit = [None] * (ROTATION_N_TO_SPLIT + 1)
+        # image_inverted = None
+        # while (angles[-1] - angles[0]) > 0.1:
+        #     # отресайзим изображение, если надо
+        #     if current_resize_level != len(ROTATION_RESIZING_LEVELS):
+        #         if (angles[-1] - angles[0]) < ROTATION_RESIZING_LEVELS[current_resize_level]['angle_diff']:
+        #             image_inverted = resize_image(invert(image), ROTATION_RESIZING_LEVELS[current_resize_level]['size'])
+        #             current_resize_level += 1
+        #             print('image inverted: ', image_inverted.size)
+        #             crit[0] = rotating_criteria(image_inverted, angles[0])
+        #             crit[-1] = rotating_criteria(image_inverted, angles[-1])
+        #
+        #     for ic in range(1, ROTATION_N_TO_SPLIT):
+        #         angles[ic] = angles[0] + (angles[-1] - angles[0]) * ic / ROTATION_N_TO_SPLIT
+        #         crit[ic] = rotating_criteria(image_inverted, angles[ic])
+        #     max_point = (np.argmin(crit) + ROTATION_N_TO_SPLIT - np.argmin(crit[::-1])) // 2
+        #     angles[0] = angles[max(max_point - 2, 0)]
+        #     angles[-1] = angles[min(max_point + 2, ROTATION_N_TO_SPLIT)]
+        #     crit[0] = crit[max(max_point - 2, 0)]
+        #     crit[-1] = crit[min(max_point + 2, ROTATION_N_TO_SPLIT)]
+        #     print('new borders: ', angles[0], angles[-1])
+        # max_point = (np.argmin(crit) + ROTATION_N_TO_SPLIT - np.argmin(crit[::-1])) // 2
+        # opt_angle = angles[max_point]
+        # opt_criteria = crit[max_point]
+        #
+        # print('opt_angle: ', opt_angle, ', criteria: ', opt_criteria)
+        opt_angle = 0
     else:
         # take existing angle
         opt_angle = angle
