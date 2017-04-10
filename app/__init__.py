@@ -69,8 +69,20 @@ class DbJson:
                 self.db_json_dict[str(new_image_id)] = {"url": line.strip()}
 
 
+def init_marked_hashes(db):
+    res = {}
+    keys = sorted(db.db_json_dict.keys())
+    for image_id in keys:
+        image_obj = db.db_json_dict[image_id]
+        if ('markdown' in image_obj) and ('hash_md5' in image_obj):
+            image_hash = image_obj['hash_md5']
+            res[image_hash] = res.get(image_hash, []) + [int(image_id)]
+    return res
+
 db = DbJson(DB_FILE_PATH)
 db.init_from_urls(DB_INIT_URLS_LIST)
+
+marked_hashes = init_marked_hashes(db)
 
 from app.models import ImagesToMark
 images = ImagesToMark()

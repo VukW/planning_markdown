@@ -2,7 +2,6 @@ from app import app, db, images
 from io import BytesIO
 from flask import send_file, redirect, jsonify, request, abort, Blueprint, render_template
 from config import OBJECT_TYPES
-from os import listdir
 
 main_page_module = Blueprint('main_page', __name__, url_prefix='/')
 

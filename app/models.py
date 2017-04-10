@@ -1,17 +1,14 @@
-from io import BytesIO
-
-from app import db
+from app import db, marked_hashes
 import random
 from PIL import ImageDraw, Image, ImageFont
 from PIL.ImageOps import invert
-from urllib.request import urlopen
-import hashlib
 import numpy as np
 from datetime import datetime as dt
 from config import (CROP_MIN_MAX_GAP,
                     CROP_SIGNIFICANT_MEAN,
                     ROTATION_N_TO_SPLIT,
                     ROTATION_RESIZING_LEVELS, LOCKED_TIME_SECONDS)
+from utils import load_image_from_url, image_hash_md5
 
 
 def random_image(seed):
@@ -53,12 +50,6 @@ def random_image(seed):
         prev_horizontal = not prev_horizontal
         d.line(prev_point + next_point, fill=0, width=3)
         prev_point = next_point
-    return img
-
-
-def load_image_from_url(url):
-    img_io = urlopen(url).read()
-    img = Image.open(BytesIO(img_io))
     return img
 
 
@@ -186,11 +177,17 @@ class ImageToMark:
     @property
     def markdown(self):
         """planning markdown is saved here (redirection to database)"""
-        return db[self.image_id]
+        return db[self.basic_image_id]
 
     @markdown.setter
     def markdown(self, value):
         db[self.image_id] = value
+
+        # update hash set: there is an marked image with that hash
+        image_hash = self.hash
+        marked_images = marked_hashes.get(image_hash, [])
+        if self.image_id not in marked_images:
+            marked_hashes[image_hash] = marked_images + [self.image_id]
 
     @property
     def image(self):
@@ -198,8 +195,11 @@ class ImageToMark:
             # self._image = random_image(self.image_id)
             self._image = load_image_from_url(self.url)
             # self._image = resize_image(self._image, 400)
-            angle = db.get_full_item(self.image_id).get('angle', None)
-            borders = db.get_full_item(self.image_id).get('borders', None)
+            basic_image_id = self.basic_image_id
+
+            angle = db.get_full_item(basic_image_id).get('angle', None)
+            borders = db.get_full_item(basic_image_id).get('borders', None)
+
             (self._image,
              angle,
              borders) = transform_image(self._image, angle=angle, borders=borders)
@@ -228,6 +228,26 @@ class ImageToMark:
             else:
                 return True
         return False
+
+    @property
+    def hash(self):
+        image_hash = db.get_full_item(self.image_id).get('hash_md5', None)
+        if image_hash is None:
+            if self._image is None:
+                image_hash = image_hash_md5(load_image_from_url(self.url))
+            else:
+                image_hash = image_hash_md5(self._image)
+            db.get_full_item(self.image_id)['hash_md5'] = image_hash
+        return image_hash
+
+    @property
+    def basic_image_id(self):
+        image_hash = self.hash
+        if image_hash in marked_hashes:
+            marked_images = marked_hashes.get(image_hash, [])
+            if len(marked_hashes) > 0:
+                return marked_images[0]
+        return self.image_id
 
 
 class ImagesToMark:
