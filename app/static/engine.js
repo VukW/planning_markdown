@@ -1,10 +1,12 @@
-//  Passed from Flask in 'main.html' template:
-//     - elements - container for the markdown
-//     - image_src - URL of the image
-
-// TODO:
-//   - close polylines
-//   - adding tags to marked elements
+/*  Passed from Flask in 'main.html' template:
+ *     - elements - container for the markdown
+ *     - image_src - URL of the image
+ *
+ *
+ *  TODO:
+ *     - close polylines
+ *     - adding tags to marked elements
+ */
 
 var elementTypes = {
     NONE: 0,
@@ -17,6 +19,7 @@ var keys = {
     SPACE: 32,
     UP: 38,
     DOWN: 40,
+    A: 65,
     C: 67,
     X: 88,
     Z: 90
@@ -30,7 +33,7 @@ var MIN_POSSIBLE_SCALE = 0.2, MAX_POSSIBLE_SCALE = 5, POINT_RADIUS = 8;
 var selectionMode = elementTypes.NONE;
 var prev = new Point(-1, -1), curr;
 var innerOffset, outerOffset, polyline_points = [];
-var scale, current_id = 0, drag = 0;
+var scale, current_id = 0, drag = 0, drawAlong = 0;
 
 var imageCanvas = document.getElementById("image");
 imageCanvas.width = window.innerWidth * 5 / 6;
@@ -53,6 +56,7 @@ activeCanvas.height = imageCanvas.height;
 var activeContext = activeCanvas.getContext("2d");
 
 var nextButton = document.getElementById("next");
+var duplicateButton = document.getElementById("duplicate");
 var zoomInButton = document.getElementById("zoom-in");
 var zoomOutButton = document.getElementById("zoom-out");
 
@@ -77,6 +81,9 @@ document.addEventListener('keyup', function (e) {
     switch (e.which) {
         case keys.SHIFT:
             drag = 0;
+            break;
+        case keys.A:
+            drawAlong = !drawAlong;
             break;
         case keys.C:
             $("#polyline").click();
@@ -140,15 +147,16 @@ $('input[name="mode"]:radio').change(function () {
     }
 });
 nextButton.addEventListener('click', sendMarkdown, false);
+duplicateButton.addEventListener('click', preventDuplicate, false);
 zoomOutButton.addEventListener('click', function () {
     innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
-    if (scale < MAX_POSSIBLE_SCALE)
+    if (scale > MIN_POSSIBLE_SCALE)
         scale /= (1 + RELATIVE_SCALE);
     redraw(false);
 }, false);
 zoomInButton.addEventListener('click', function () {
     innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
-    if (scale > MIN_POSSIBLE_SCALE)
+    if (scale < MAX_POSSIBLE_SCALE)
         scale *= (1 + RELATIVE_SCALE);
     redraw(false);
 }, false);
@@ -269,6 +277,15 @@ function sendMarkdown () {
     }
 }
 
+function preventDuplicate () {
+    var id = window.location.pathname;
+    var target = "/image" + id + "?duplicate=true";
+    var xmlhttp = new XMLHttpRequest();
+
+    xmlhttp.open('POST', target, true);
+    xmlhttp.send('warning');
+}
+
 function setSelectionMode (mode) {
     selectionMode = mode;
     document.getElementById("mode").innerHTML = 'Mode: ' + elementNames[selectionMode].toUpperCase();
@@ -351,6 +368,7 @@ function clearCanvas (canvas) {
 
 function highlight (id) {
     activeContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
+    activeContext.globalAlpha = 0.4;
 
     switch (elements[id].type) {
         case "segment":
@@ -387,6 +405,7 @@ $(".list-group").on('click', '.delete-element', function () {
     delete elements[id];
     // document.getElementById("mode").innerHTML = JSON.stringify(elements);
     markContext.clearRect(-image.width / 2, -image.height / 2, image.width, image.height);
+    clearCanvas(activeCanvas);
     drawAll(markContext, false);
 });
 
@@ -426,6 +445,12 @@ function redraw (load) {
 function coords (e) {
     x = e.pageX - outerOffset.x;
     y = e.pageY - outerOffset.y;
+    if ((drawAlong) && (prev.x != -1) && (prev.y != -1)) {
+        dx = Math.abs(x - prev.x);
+        dy = Math.abs(y - prev.y);
+        x = (dx > dy) ? x : prev.x;
+        y = (dx > dy) ? prev.y : y;
+    }
     return new Point(x, y);
 }
 

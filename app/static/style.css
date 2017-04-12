@@ -37,7 +37,7 @@ canvas {
 }
 
 .list-container {
-    height: 540px;
+    height: 500px;
     overflow-y: scroll;
 }
 
