@@ -34,7 +34,7 @@ def get_image(image_id):
 
 def get_next_image_id(start=-1):
     for image_id in range(start + 1, 1000000):
-        if (images[image_id].markdown == {}) or images[image_id].duplicate:
+        if (images[image_id].markdown == {}) and not images[image_id].duplicate:
             return image_id
 
 

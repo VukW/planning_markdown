@@ -279,7 +279,7 @@ function sendMarkdown () {
 
 function preventDuplicate () {
     var id = window.location.pathname;
-    var target = "/image" + id + "?duplicate=true";
+    var target = "/image" + id + "/duplicate?duplicate=true";
     var xmlhttp = new XMLHttpRequest();
 
     xmlhttp.open('POST', target, true);

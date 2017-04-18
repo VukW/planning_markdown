@@ -225,6 +225,7 @@ class ImageToMark:
     @duplicate.setter
     def duplicate(self, value):
         db.get_full_item(self.image_id)['duplicate'] = value
+        db.save()
 
 
 class ImagesToMark:
