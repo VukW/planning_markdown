@@ -218,6 +218,14 @@ class ImageToMark:
     def url(self):
         return db.get_full_item(self.image_id)['url']
 
+    @property
+    def duplicate(self):
+        return db.get_full_item(self.image_id).get('duplicate', False)
+
+    @duplicate.setter
+    def duplicate(self, value):
+        db.get_full_item(self.image_id)['duplicate'] = value
+
 
 class ImagesToMark:
     def __init__(self):
