@@ -13,16 +13,28 @@ def serve_pil_image(pil_img):
     return send_file(img_io, mimetype='image/jpeg')
 
 
+@app.route('/image/<int:image_id>/duplicate', methods=['GET', 'POST'])
+def get_duplicate(image_id):
+    if request.method == 'GET':
+        return images[image_id].duplicate
+    elif request.method == 'POST':
+        if 'duplicate' not in request.args:
+            return abort('duplicate param is obligatory here')
+        duplicate = request.args['duplicate']
+        duplicate = (duplicate.lower().strip() in ['t', 'true'])
+        images[image_id].duplicate = duplicate
+        return jsonify(msg="ok")
+
+
 @app.route('/image/<int:image_id>')
 def get_image(image_id):
-        image_id = image_id
         return serve_pil_image(images[image_id].image)
 
 
 def get_next_image_id(start=-1):
     for image_id in range(start + 1, 1000000):
         image = images[image_id]
-        if (not image.locked) and (image.markdown == {}):
+        if (not image.locked) and (image.markdown == {}) and not image.duplicate:
             return image_id
 
 
