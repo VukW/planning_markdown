@@ -105,7 +105,7 @@ if __name__ == '__main__':
         real_size = image.size # w, h
         resized_clustered_points = transform_corners(clustered_points, db_json[image_id]['borders'], real_size)
         save_corners(image, image_id, resized_clustered_points)
-        classified_df.append(image, image_id, resized_clustered_points)
+        classified_df.append(image, image_id, resized_clustered_points, new_edges)
         progress_bar.update(1)
 
     # saving cleaned jsons

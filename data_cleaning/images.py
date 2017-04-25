@@ -6,6 +6,7 @@ from PIL.ImageOps import invert
 
 TRANSFORMED_IMAGES_FOLDER = '../images'
 CORNER_RADIUS = 32
+FINAL_RADIUS = 12
 CORNERS_TRANSFORMATIONS = 5
 
 
@@ -84,7 +85,7 @@ def corner_randomly_transform(image, corner,
                                      draft_image.size[1] // 2 + y_radius))
 
     # scale
-    return corner_image.resize((CORNER_RADIUS * 2, CORNER_RADIUS * 2))
+    return corner_image.resize((FINAL_RADIUS * 2, FINAL_RADIUS * 2))
 
 
 class DataFrameForClassifier:
@@ -110,7 +111,7 @@ class DataFrameForClassifier:
         self.next_idx_ = 0
 
     def empty_data_chunk(self):
-        return np.zeros((self.step, 4*CORNER_RADIUS**2), dtype=np.uint8)
+        return np.zeros((self.step, 4*FINAL_RADIUS**2), dtype=np.uint8)
 
     def next_idx(self):
         if self.data.shape[0] <= self.next_idx_:
@@ -134,7 +135,7 @@ class DataFrameForClassifier:
             del corner_row_app
         del corner_array_app
 
-    def append(self, image, image_id, corners):
+    def append(self, image, image_id, corners, edges):
         # add white borders to image
         # print('appending image', image_id)
         border_size = 2 * CORNER_RADIUS
@@ -196,7 +197,39 @@ class DataFrameForClassifier:
         corner_base = {'image_id': image_id,
                        'image_width': image.size[0],
                        'image_height': image.size[1]}
+
         not_a_corners = 0
+        # add not-a-corner for each edge (random point)
+        for point_from in edges:
+            for point_to in edges[point_from]:
+                if point_from >= point_to:
+                    continue
+                edge_start = np.array(corners[point_from])
+                edge_end = np.array(corners[point_to])
+                edge_vect = edge_end - edge_start
+                edge_len = np.linalg.norm(edge_vect)
+                if edge_len < CORNER_RADIUS * 2:
+                    continue
+                t = np.random.rand() * (edge_len - CORNER_RADIUS * 2) + CORNER_RADIUS
+                random_point = np.round(edge_start + edge_vect * t / edge_len)
+                corner_row = corner_base.copy()
+                corner_row['source_x'] = random_point[0]
+                corner_row['source_y'] = random_point[1]
+                corner_row['source_corner_width'] = CORNER_RADIUS
+                corner_row['source_corner_height'] = CORNER_RADIUS
+                corner_row['angle'] = 0
+                corner_row['offset_x'] = 0
+                corner_row['offset_y'] = 0
+                corner_row['label'] = 0
+                corner_image = corner_randomly_transform(white_filled,
+                                                         random_point)
+                corner_array = np.array(corner_image.getdata()).reshape(corner_image.size[::-1])
+                self.append_rotated_8_directions(corner_row, corner_array)
+                not_a_corners += 1
+                del corner_row
+                del corner_array
+                del corner_image
+
         while not_a_corners < len(corners) * (CORNERS_TRANSFORMATIONS + 1):
             random_point = np.array([np.random.randint(image.size[0]),
                                      np.random.randint(image.size[1])])
