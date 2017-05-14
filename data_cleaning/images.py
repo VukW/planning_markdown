@@ -8,7 +8,7 @@ TRANSFORMED_IMAGES_FOLDER = '../images'
 CORNER_RADIUS = 32
 FINAL_RADIUS = 12
 CORNERS_TRANSFORMATIONS = 6
-FLAT_CORNER_COSINE = 0.1
+FLAT_CORNER_COSINE = -0.1
 
 
 def save_image(image, image_id):
@@ -100,7 +100,7 @@ def get_corner_label(corner_no, corners, edges):
     if len(edges[corner_no]) != 2:
         return len(edges[corner_no]) + 1
 
-    # check if angle is flat: cosine(AB, BC) < -0.1
+    # check if angle is flat: cosine(AB, BC) < -THRESHOLD
     b = np.array(corners[corner_no])
     a = np.array(corners[edges[corner_no][0]])
     c = np.array(corners[edges[corner_no][1]])
@@ -203,8 +203,8 @@ class DataFrameForClassifier:
                 corner_row['source_corner_height'] = int(CORNER_RADIUS * 2 * random_scale_coeff(0.5, 1.5))
                 corner_row['source_corner_width'] = int(CORNER_RADIUS * 2 * random_scale_coeff(0.5, 1.5))
                 corner_row['angle'] = random_offset_coeff(45)
-                corner_row['offset_x'] = int(random_offset_coeff(CORNER_RADIUS / 2))
-                corner_row['offset_y'] = int(random_offset_coeff(CORNER_RADIUS / 2))
+                corner_row['offset_x'] = int(random_offset_coeff(CORNER_RADIUS / 4))
+                corner_row['offset_y'] = int(random_offset_coeff(CORNER_RADIUS / 4))
                 corner_image = corner_randomly_transform(white_filled,
                                                          corner,
                                                          offset_x=corner_row['offset_x'],
