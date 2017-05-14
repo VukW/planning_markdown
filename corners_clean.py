@@ -6,7 +6,7 @@ from tqdm import tqdm
 from config import DB_FILE_PATH
 from data_cleaning.graph import cluster_points, transform_edges, link_points_to_nearest_edge, add_all_intersections
 from app.models import load_image_from_url, transform_image
-from data_cleaning.images import  save_corners, save_image, transform_corners, DataFrameForClassifier
+from data_cleaning.images import save_corners, save_image, transform_corners, DataFrameForClassifier
 
 
 def json_int_serialize(obj):

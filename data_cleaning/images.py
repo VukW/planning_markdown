@@ -7,7 +7,8 @@ from PIL.ImageOps import invert
 TRANSFORMED_IMAGES_FOLDER = '../images'
 CORNER_RADIUS = 32
 FINAL_RADIUS = 12
-CORNERS_TRANSFORMATIONS = 5
+CORNERS_TRANSFORMATIONS = 6
+FLAT_CORNER_COSINE = 0.1
 
 
 def save_image(image, image_id):
@@ -88,6 +89,30 @@ def corner_randomly_transform(image, corner,
     return corner_image.resize((FINAL_RADIUS * 2, FINAL_RADIUS * 2))
 
 
+def get_corner_label(corner_no, corners, edges):
+    """calculates class of the corner based on the edges
+    classes:
+    1 - flat corner (where two neighbours and angle > 90)
+    2 - one-neighboured corner
+    ...
+    N+1 - N-neighboured corner
+    """
+    if len(edges[corner_no]) != 2:
+        return len(edges[corner_no]) + 1
+
+    # check if angle is flat: cosine(AB, BC) < -0.1
+    b = np.array(corners[corner_no])
+    a = np.array(corners[edges[corner_no][0]])
+    c = np.array(corners[edges[corner_no][1]])
+
+    vect_ab = b - a
+    vect_bc = c - b
+    if np.dot(vect_ab, vect_bc) < FLAT_CORNER_COSINE * np.linalg.norm(vect_ab) * np.linalg.norm(vect_bc):
+        return 1  # the corner is flat
+    else:
+        return 3  # 2-neighboured class
+
+
 class DataFrameForClassifier:
     def __init__(self):
         np.random.seed(514229)
@@ -144,7 +169,7 @@ class DataFrameForClassifier:
                                   image.size[1] + 2 * border_size),
                                  color=255)
         white_filled.paste(image, (border_size, border_size))
-        for corner_old in corners:
+        for ic, corner_old in enumerate(corners):
             # print('corner', corner_old)
             corner = (corner_old[0] + border_size,
                       corner_old[1] + border_size)
@@ -152,15 +177,16 @@ class DataFrameForClassifier:
                            'source_x': corner[0],
                            'source_y': corner[1],
                            'image_width': image.size[0],
-                           'image_height': image.size[1]}
+                           'image_height': image.size[1],
+                           'label': get_corner_label(ic, corners, edges)}
 
+            # add original corner
             corner_row = corner_base.copy()
             corner_row['source_corner_height'] = CORNER_RADIUS * 2
             corner_row['source_corner_width'] = CORNER_RADIUS * 2
             corner_row['angle'] = 0
             corner_row['offset_x'] = 0
             corner_row['offset_y'] = 0
-            corner_row['label'] = 1
             corner_image = corner_randomly_transform(white_filled, corner)
             corner_array = np.array(corner_image.getdata()).reshape(corner_image.size[::-1])  # h,w
             # print('corner received, ', corner_array.shape)
@@ -179,7 +205,6 @@ class DataFrameForClassifier:
                 corner_row['angle'] = random_offset_coeff(45)
                 corner_row['offset_x'] = int(random_offset_coeff(CORNER_RADIUS / 2))
                 corner_row['offset_y'] = int(random_offset_coeff(CORNER_RADIUS / 2))
-                corner_row['label'] = 1
                 corner_image = corner_randomly_transform(white_filled,
                                                          corner,
                                                          offset_x=corner_row['offset_x'],
