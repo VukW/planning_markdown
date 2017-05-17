@@ -5,10 +5,14 @@ import pandas as pd
 from PIL.ImageOps import invert
 
 TRANSFORMED_IMAGES_FOLDER = '../images'
-CORNER_RADIUS = 32
-FINAL_RADIUS = 12
-CORNERS_TRANSFORMATIONS = 6
-FLAT_CORNER_COSINE = -0.1
+CORNER_RADIUS = 32  # neighbourhood of this radius is taken for each corner point
+FINAL_RADIUS = 12  # corners are resized to this radius (to decrease dimensionality)
+CORNERS_TRANSFORMATIONS = 6  # data augmentation. Each corner is randomly transformed this times
+FLAT_CORNER_COSINE = -0.1  # if the cosine between two edges is lower, then angle is flat
+BLACK_THRESHOLD = 192  # we left only pixels darker than this
+EDGE_WIDTH = 10
+EDGE_FINAL_WIDTH = 10
+EDGE_FINAL_LENGTH = 30
 
 
 def save_image(image, image_id):
@@ -113,7 +117,33 @@ def get_corner_label(corner_no, corners, edges):
         return 3  # 2-neighboured class
 
 
-class DataFrameForClassifier:
+def clean_image(image):
+    data = np.array(image.getdata()).reshape(image.size[::-1]).astype('uint8')
+    data[data > BLACK_THRESHOLD] = 255
+    return Image.fromarray(data, mode='L')
+
+#
+# class DataFrameClassifier_:
+#     """template for classifying """
+#
+#     def __init__(self):
+#         np.random.seed(514229)
+#         self.step = 1000
+#         self.data = self.empty_data_chunk()
+#         self.df = []  # now it is just list; we will convert it to pd.df later
+#         self.next_idx_ = 0
+#
+#     def empty_data_chunk(self):
+#         return np.zeros((self.step, 4 * FINAL_RADIUS ** 2), dtype=np.uint8)
+#
+#     def next_idx(self):
+#         if self.data.shape[0] <= self.next_idx_:
+#             self.data = np.vstack((self.data, self.empty_data_chunk()))
+#         self.next_idx_ += 1
+#         return self.next_idx_ - 1
+
+
+class DataFrameForCornersClassifier:
     def __init__(self):
         np.random.seed(514229)
         self.step = 1000
@@ -136,7 +166,7 @@ class DataFrameForClassifier:
         self.next_idx_ = 0
 
     def empty_data_chunk(self):
-        return np.zeros((self.step, 4*FINAL_RADIUS**2), dtype=np.uint8)
+        return np.zeros((self.step, 4 * FINAL_RADIUS ** 2), dtype=np.uint8)
 
     def next_idx(self):
         if self.data.shape[0] <= self.next_idx_:
@@ -169,6 +199,7 @@ class DataFrameForClassifier:
                                   image.size[1] + 2 * border_size),
                                  color=255)
         white_filled.paste(image, (border_size, border_size))
+
         for ic, corner_old in enumerate(corners):
             # print('corner', corner_old)
             corner = (corner_old[0] + border_size,
@@ -266,13 +297,13 @@ class DataFrameForClassifier:
             # check that point has enough info
 
             if (np.array(white_filled
-                                 .crop((random_point[0] - CORNER_RADIUS,
-                                        random_point[1] - CORNER_RADIUS,
-                                        random_point[0] + CORNER_RADIUS,
-                                        random_point[1] + CORNER_RADIUS))
-                                 .getdata())
-                        .reshape((CORNER_RADIUS * 2, CORNER_RADIUS * 2))
-                        .mean()) < 255 * 0.05:  # at least 5% of the area should be filled
+                         .crop((random_point[0] - CORNER_RADIUS,
+                                random_point[1] - CORNER_RADIUS,
+                                random_point[0] + CORNER_RADIUS,
+                                random_point[1] + CORNER_RADIUS))
+                         .getdata())
+                .reshape((CORNER_RADIUS * 2, CORNER_RADIUS * 2))
+                    .mean()) < 255 * 0.05:  # at least 5% of the area should be filled
                 continue
             corner_row = corner_base.copy()
             corner_row['source_x'] = random_point[0]
@@ -291,6 +322,186 @@ class DataFrameForClassifier:
             del corner_row
             del corner_array
             del corner_image
+        del white_filled
+
+    def save(self, filename):
+        pd.DataFrame(self.df).to_csv(filename, index=False)
+        np.save(filename + '.data', self.data[:self.next_idx_])
+
+
+def edge_extract(image: Image, point_from: tuple, point_to: tuple, edge_width: int):
+    edge = image.crop((min(point_from[0], point_to[0]) - 2 * edge_width,
+                       min(point_from[1], point_to[1]) - 2 * edge_width,
+                       max(point_from[0], point_to[0]) + 2 * edge_width,
+                       max(point_from[1], point_to[1]) + 2 * edge_width,
+                       ))
+    vect_edge = np.array(point_from) - np.array(point_to)
+    edge_len = np.linalg.norm(vect_edge)
+    angle = np.arccos(np.dot(vect_edge, [0, 1]) / edge_len) * 180 / np.pi
+    # we don't know if we should rotate on +angle or -angle.
+    # if angle between vect and OX is < 90, then we 'll rotate on +angle;
+    # else, on -angle
+    if np.dot(vect_edge, [1, 0]) < 0:
+        angle = -angle
+    edge = invert(edge)
+    edge = edge.rotate(angle=angle, expand=True)
+    edge = invert(edge)
+    new_center = np.array(edge.size) // 2
+    edge = edge.crop((new_center[0] - edge_width,
+                      new_center[1] - int(edge_len / 2),
+                      new_center[0] + edge_width,
+                      new_center[1] + int(edge_len / 2)))
+    return edge
+
+
+def check_if_edge(start: int, end: int, corners: list, edges: dict) -> bool:
+    """
+    solves if there is a single wall connecting this two corners. The problem is that wall may consist of
+    multiple edges
+    Implements Dijkstra algorithm for finding the shortest path
+    :param start: corner1 number
+    :param end: corner2 number
+    :param corners: corner coordinates
+    :param edges: list of connecting edges
+    :return: boolean: True / False
+    """
+
+    def line_len(start_corner: int, end_corner: int):
+        return ((corners[start_corner][0] - corners[end_corner][0]) ** 2 +
+                (corners[start_corner][1] - corners[end_corner][1]) ** 2)
+
+    # simple check: maybe there is one direct edge
+    if end in edges[start]:
+        return True
+
+    FAKE_DISTANCE = 1e15
+    # the nodes are connected if distance between them is almost the same as the direct distance
+    # We calculate not the distance itself bu the square of distance
+    ALLOWED_THRESHOLD = 1.02 ** 2
+
+    direct_distance = line_len(start, end)
+
+    distances = [FAKE_DISTANCE] * len(corners)
+    distances[start] = 0
+    marked = [False] * len(corners)
+
+    while True:
+        # find the unmarked corner with the smallest distance
+        current_corner = None
+        min_distance = FAKE_DISTANCE
+        for ic, dist_ in enumerate(distances):
+            if (not marked[ic]) and (dist_ < min_distance):
+                min_distance = dist_
+                current_corner = ic
+
+        if current_corner is None:
+            # no unmarked corners within start component
+            return False
+
+        if min_distance > direct_distance * ALLOWED_THRESHOLD:
+            # we are already too far from the start point
+            return False
+
+        if current_corner == end:
+            # the distance is less and we already finished
+            return True
+
+        # graph walking
+        for next_corner in edges[current_corner]:
+            distances[next_corner] = min(distances[next_corner],
+                                         min_distance + line_len(current_corner, next_corner))
+
+        marked[current_corner] = True
+
+
+class DataFrameForEdgesClassifier:
+    def __init__(self):
+        np.random.seed(514229)
+        self.step = 1000
+        self.data = self.empty_data_chunk()
+        self.df = []  # now it is just list; we will convert it to pd.df later
+        self.next_idx_ = 0
+
+    def empty_data_chunk(self):
+        return np.zeros((self.step, EDGE_FINAL_LENGTH * EDGE_FINAL_WIDTH), dtype=np.uint8)
+
+    def next_idx(self):
+        if self.data.shape[0] <= self.next_idx_:
+            self.data = np.vstack((self.data, self.empty_data_chunk()))
+        self.next_idx_ += 1
+        return self.next_idx_ - 1
+
+    def append_rotated_4_directions(self, edge_row, edge_array_2d):
+        edge_array_app = edge_array_2d.copy()
+        for direction in range(4):
+            edge_row_app = edge_row.copy()
+            edge_row_app['direction'] = direction
+
+            row_idx = self.next_idx()
+            self.data[row_idx] = edge_array_app.reshape(-1)
+            self.df.append(edge_row_app)
+            if direction == 1:
+                # mirror corner
+                edge_array_app = edge_array_app[::-1, :]
+            else:
+                edge_array_app = edge_array_app[:, ::-1]
+            del edge_row_app
+        del edge_array_app
+
+    def append(self, image, image_id, corners, edges):
+        """
+        appends every edge to df
+        :param image:
+        :param image_id:
+        :param corners:
+        :param edges:
+        :return: None
+        """
+        border_size = 2 * CORNER_RADIUS
+        white_filled = Image.new('L',
+                                 (image.size[0] + 2 * border_size,
+                                  image.size[1] + 2 * border_size),
+                                 color=255)
+        white_filled.paste(image, (border_size, border_size))
+
+        bordered_corners = np.array(corners) + (border_size, border_size)
+
+        for ic, point_from in enumerate(bordered_corners):
+            # print('corner', corner_old)
+            for jc, point_to in enumerate(bordered_corners[ic + 1:], start=ic + 1):
+                if check_if_edge(ic, jc, corners, edges):
+                    right_answer = 1
+                else:
+                    right_answer = 0
+
+                edge_base = {'image_id': image_id,
+                             'source_start_x': point_from[0],
+                             'source_start_y': point_from[1],
+                             'source_end_x': point_to[0],
+                             'source_end_y': point_to[1],
+                             'image_width': image.size[0],
+                             'image_height': image.size[1],
+                             'label': right_answer}
+
+                # add original edge
+                edge_row = edge_base.copy()
+                edge_row['source_edge_len'] = np.linalg.norm(np.array(point_to) - np.array(point_from))
+                edge_width = int(EDGE_WIDTH * random_scale_coeff(0.9, 2))
+                edge_row['source_edge_width'] = edge_width
+                edge_image = edge_extract(white_filled,
+                                          point_from,
+                                          point_to,
+                                          edge_width=edge_width).resize((EDGE_FINAL_WIDTH,
+                                                                        EDGE_FINAL_LENGTH))
+                edge_array = np.array(edge_image.getdata()).reshape(edge_image.size[::-1])  # h,w
+                # print('edge received, ', edge_array.shape)
+                self.append_rotated_4_directions(edge_row, edge_array)
+
+                del edge_row
+                del edge_image
+                del edge_array
+
+        del bordered_corners
         del white_filled
 
     def save(self, filename):

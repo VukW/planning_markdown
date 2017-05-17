@@ -6,7 +6,8 @@ from tqdm import tqdm
 from config import DB_FILE_PATH
 from data_cleaning.graph import cluster_points, transform_edges, link_points_to_nearest_edge, add_all_intersections
 from app.models import load_image_from_url, transform_image
-from data_cleaning.images import save_corners, save_image, transform_corners, DataFrameForClassifier
+from data_cleaning.images import save_corners, save_image, transform_corners, DataFrameForCornersClassifier, clean_image, \
+    DataFrameForEdgesClassifier
 
 
 def json_int_serialize(obj):
@@ -22,8 +23,8 @@ if __name__ == '__main__':
         db_json = json.loads(f_to_read_json.read())
     clustered_only_json = {}
     web_service_new_db_json = {}
-    classified_df = DataFrameForClassifier()
-
+    classified_corners_df = DataFrameForCornersClassifier()
+    classified_edges_df = DataFrameForEdgesClassifier()
     # for every point
     keys = sorted(list(db_json.keys()))
     # for ic, image_id in tqdm(enumerate(db_json)):
@@ -101,11 +102,13 @@ if __name__ == '__main__':
         # load image, transform, save corners
         image = load_image_from_url(db_json[image_id]['url'])
         image = transform_image(image, db_json[image_id]['angle'], db_json[image_id]['borders'])[0]
+        image = clean_image(image)
         save_image(image, image_id)
         real_size = image.size # w, h
         resized_clustered_points = transform_corners(clustered_points, db_json[image_id]['borders'], real_size)
         save_corners(image, image_id, resized_clustered_points)
-        classified_df.append(image, image_id, resized_clustered_points, new_edges)
+        classified_corners_df.append(image, image_id, resized_clustered_points, new_edges)
+        classified_edges_df.append(image, image_id, resized_clustered_points, new_edges)
         progress_bar.update(1)
 
     # saving cleaned jsons
@@ -118,4 +121,5 @@ if __name__ == '__main__':
         print(json.dumps(web_service_new_db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
 
     # classifier
-    classified_df.save(DB_FILE_PATH + '-dataframe.csv')
+    classified_corners_df.save(DB_FILE_PATH + '-corners-df.csv')
+    classified_edges_df.save(DB_FILE_PATH + '-edges-df.csv')
