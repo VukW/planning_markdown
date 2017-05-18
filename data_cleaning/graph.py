@@ -54,17 +54,23 @@ def cluster_points(points, clustering_dist=CLUSTERING_DIST):
          ...,
          (xn, yn): (xj, yj)}
     """
+    # clustering_dist **= 2
+    points = sorted(points)
+
     clusters = []  # list of lists
+    points = [np.array(p) for p in points]
+
     for point1 in points:
         new_cluster = [point1]
-        for ic in range(len(clusters)):
-            cluster = clusters[ic]
-            for point2 in cluster:
-                if dist(point1, point2) < clustering_dist:
-                    new_cluster += cluster
-                    clusters[ic] = []
-                    break
-        clusters.append(new_cluster)
+        for ic, cluster in enumerate(clusters):
+            if np.linalg.norm(cluster - point1, axis=1).min() < clustering_dist:
+                # if np.sum((point1 - point2)**2) < clustering_dist:
+                # if dist(point1, point2) < clustering_dist:
+                new_cluster += cluster
+                clusters[ic] = []
+                break
+        clusters = [new_cluster] + [c for c in clusters if len(c) > 0]
+
     clustered_points = []
     points_transform_clustering = {}
     for cluster in clusters:
@@ -73,7 +79,7 @@ def cluster_points(points, clustering_dist=CLUSTERING_DIST):
         cluster_mean = list_to_tuple(np.mean(cluster, axis=0))
         clustered_points.append(cluster_mean)
         for point in cluster:
-            points_transform_clustering[point] = cluster_mean
+            points_transform_clustering[list_to_tuple(point)] = cluster_mean
     return clustered_points, points_transform_clustering
 
 
@@ -208,7 +214,9 @@ def real_intersect(edge1, edge2):
             return []
         # ребра лежат на одной линии
         four_points = [edge1[0], edge1[1], edge2[0], edge2[1]]
-        four_points.sort()
+        vect1 = np.array(edge1[1]) - np.array(edge1[0])
+        norm1 = np.linalg.norm(vect1)
+        four_points.sort(key=lambda a: np.dot(np.array(a)-np.array(edge1[0]), vect1) / norm1)
         return four_points[1:3]
 
     full_mat = np.array([line1, line2])
@@ -228,7 +236,7 @@ def real_intersect(edge1, edge2):
         return []
 
 
-def add_all_intersections(old_points, old_edges):
+def add_all_intersections(old_points, old_edges, image=None):
     """search for every intersection between any of two edges and split these edges accordingly
     :param old_points: list of old points, [(x1, y1)..(xk, yk)]
     :param old_edges: {0:[1,2,3], 1:[0,2,5],..}
@@ -280,7 +288,7 @@ def add_all_intersections(old_points, old_edges):
     return new_points, edges_list_to_dict(new_edges)
 
 
-def clean_markdown(old_points, old_edges):
+def clean_markdown(old_points, old_edges, image=None):
     """
     cleans the data
     :param old_points: [(x1,y1),..]
@@ -292,7 +300,7 @@ def clean_markdown(old_points, old_edges):
 
     # 1. add all intersections between edges
     # [(x1, y1),..] , {1:[2,3,4],..} <= [(x1, y1),..] , {1:[2,3,4],..}
-    new_points, new_edges = add_all_intersections(old_points, old_edges)
+    new_points, new_edges = add_all_intersections(old_points, old_edges, image=image)
 
     # 2. cluster points
     # 3. transform edges with transformation dict
@@ -312,3 +320,5 @@ def clean_markdown(old_points, old_edges):
     new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
     # cleaning finished
     # =======================
+
+    return clustered_points, new_edges

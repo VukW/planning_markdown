@@ -3,6 +3,7 @@ from os.path import join
 import numpy as np
 import pandas as pd
 from PIL.ImageOps import invert
+from utils import draw_points
 
 TRANSFORMED_IMAGES_FOLDER = '../images'
 CORNER_RADIUS = 32  # neighbourhood of this radius is taken for each corner point
@@ -138,10 +139,10 @@ class BaseDataFrameClassifier:
     def __init__(self, data_size):
         np.random.seed(514229)
         self.step = 1000
+        self.data_size = data_size
         self.data = self.empty_data_chunk()
         self.df = []  # now it is just list; we will convert it to pd.df later
         self.next_idx_ = 0
-        self.data_size = data_size
 
     def empty_data_chunk(self):
         return np.zeros((self.step, self.data_size), dtype=np.uint8)

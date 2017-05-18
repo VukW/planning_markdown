@@ -2,6 +2,7 @@ from urllib.request import urlopen
 from hashlib import md5
 from io import BytesIO
 from PIL import Image
+from PIL import ImageDraw
 
 
 def load_image_from_url(url):
@@ -35,9 +36,27 @@ def build_new_markdown(clustered_points, new_edges):
                                                       }
                                                   ]}
             segment_counter += 1
+    return new_markdown
 
 
 def json_int_serialize(obj):
     if isinstance(obj, int):
         return str(obj)
     raise TypeError("Type not serializable")
+
+
+def draw_points(image, points, edges=None):
+    image = image.copy().convert("RGB")
+    canvas = ImageDraw.Draw(image)
+    if edges is not None:
+        for ic in edges:
+            for jc in edges[ic]:
+                if jc <= ic:
+                    continue
+                canvas.line([tuple(points[ic]), tuple(points[jc])], fill=(0, 255, 128), width=5)
+
+    for p in points:
+        canvas.ellipse((p[0] - 5, p[1] - 5, p[0] + 5, p[1] + 5),
+                       fill=(255, 128, 10))
+    del canvas
+    return image
