@@ -46,7 +46,14 @@ def line_from_two_points(point1, point2):
 
 
 def cluster_points(points):
-    """Объединяет рядом лежащие точки в единый кластер"""
+    """Объединяет рядом лежащие точки в единый кластер
+    :param points: list of points, [(x1, y1), .., (xn, yn)]
+    :return clustered_points: list of clustered points, [(x1, y1), .., (xk, yk)]
+    :return points_transform_clustering: transformation dict:
+        {(x1, y1): (xi, yi),
+         ...,
+         (xn, yn): (xj, yj)}
+    """
     clusters = []  # list of lists
     for point1 in points:
         new_cluster = [point1]
@@ -71,6 +78,14 @@ def cluster_points(points):
 
 
 def transform_edges(old_points, old_edges, new_points, transformation_dict):
+    """
+    replace old point indices with new one
+    :param old_points: [(x1,y1), .., (xn,yn)]
+    :param old_edges: {0:[1,2,3], ..}
+    :param new_points: [(x1,y1), .., (xk,yk)]
+    :param transformation_dict: {(x1,y1): (xi,yi), ..}
+    :return new_edges:  {0:[1,2,3], ..}
+    """
     def new_point_pos(old_point):
         return new_points.index(transformation_dict[old_points[old_point]])
 
@@ -119,7 +134,12 @@ def dist_point_to_edge(point, edge_start, edge_end):
 
 def link_points_to_nearest_edge(points, edges):
     """for each point it seeks for the nearest edge, then split edge into two parts
-    and link point to splitting"""
+    and link point to splitting
+    :param points: [(x1,y1), .., (xn,yn)]
+    :param edges: {0:[1,2,3],..}
+    :return new_points: [(x1,y1), .., (xn,yn)]
+    :return new_edges: {0:[1,2,3],..}
+    """
     # get simple 1d list of all edges
     edges_list = edges_dict_to_list(edges)
 
@@ -209,7 +229,12 @@ def real_intersect(edge1, edge2):
 
 
 def add_all_intersections(old_points, old_edges):
-    """search for every intersection between any of two edges and split these edges accordingly"""
+    """search for every intersection between any of two edges and split these edges accordingly
+    :param old_points: list of old points, [(x1, y1)..(xk, yk)]
+    :param old_edges: {0:[1,2,3], 1:[0,2,5],..}
+    :return new_points: extended list of points, [(x1,y1),..(xn, yn)]
+    :return new_edges: extended list of edges, {0:[1,2,3], 1:[0,2,5],..}
+    """
     new_points = old_points.copy()
     edges = edges_dict_to_list(old_edges)
     edges_splits = [[] for _ in range(len(edges))]

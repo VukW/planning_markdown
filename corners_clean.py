@@ -21,6 +21,11 @@ if __name__ == '__main__':
     # read db file
     with open(DB_FILE_PATH, 'r') as f_to_read_json:
         db_json = json.loads(f_to_read_json.read())
+
+    # {image_id: {
+    #   "points": [(x1, y1), .., (xk, yk)]
+    #   "edges":
+    # }}
     clustered_only_json = {}
     web_service_new_db_json = {}
     classified_corners_df = DataFrameForCornersClassifier()
@@ -59,16 +64,26 @@ if __name__ == '__main__':
 
         # =======================
         # clean the data:
+
         # 1. add all intersections between edges
+        # [(x1, y1),..] , {1:[2,3,4],..} <= [(x1, y1),..] , {1:[2,3,4],..}
         new_points, new_edges = add_all_intersections(old_points, old_edges)
+
         # 2. cluster points
         # 3. transform edges with transformation dict
+        # [(x1,y1),..], {(x1,y1):(xi,yi),..} <= [(x1,y1),..]
         clustered_points, transformation_dict = cluster_points(new_points)
+        # {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}, [(x1,y1),..], {(x1,y1):(xi,yi),..}
         new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
+
         # 4. for every point we seek for the nearest edge and link it here
+        # [(x1,y1),..], {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}
         new_points, new_edges = link_points_to_nearest_edge(clustered_points, new_edges)
+
         # 5, 6. repeat clustering
+        # [(x1,y1),..], {(x1,y1):(xi,yi),..} <= [(x1,y1),..]
         clustered_points, transformation_dict = cluster_points(new_points)
+        # {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}, [(x1,y1),..], {(x1,y1):(xi,yi),..}
         new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
         # cleaning finished
         # =======================
@@ -104,7 +119,7 @@ if __name__ == '__main__':
         image = transform_image(image, db_json[image_id]['angle'], db_json[image_id]['borders'])[0]
         image = clean_image(image)
         save_image(image, image_id)
-        real_size = image.size # w, h
+        real_size = image.size  # w, h
         resized_clustered_points = transform_corners(clustered_points, db_json[image_id]['borders'], real_size)
         save_corners(image, image_id, resized_clustered_points)
         classified_corners_df.append(image, image_id, resized_clustered_points, new_edges)

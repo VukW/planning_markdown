@@ -10,9 +10,10 @@ FINAL_RADIUS = 12  # corners are resized to this radius (to decrease dimensional
 CORNERS_TRANSFORMATIONS = 6  # data augmentation. Each corner is randomly transformed this times
 FLAT_CORNER_COSINE = -0.1  # if the cosine between two edges is lower, then angle is flat
 BLACK_THRESHOLD = 192  # we left only pixels darker than this
-EDGE_WIDTH = 10
-EDGE_FINAL_WIDTH = 10
+EDGE_WIDTH = 20
+EDGE_FINAL_WIDTH = 12
 EDGE_FINAL_LENGTH = 30
+IS_EDGE_ALLOWED_THRESHOLD = 1.02
 
 
 def save_image(image, image_id):
@@ -122,57 +123,34 @@ def clean_image(image):
     data[data > BLACK_THRESHOLD] = 255
     return Image.fromarray(data, mode='L')
 
-#
-# class DataFrameClassifier_:
-#     """template for classifying """
-#
-#     def __init__(self):
-#         np.random.seed(514229)
-#         self.step = 1000
-#         self.data = self.empty_data_chunk()
-#         self.df = []  # now it is just list; we will convert it to pd.df later
-#         self.next_idx_ = 0
-#
-#     def empty_data_chunk(self):
-#         return np.zeros((self.step, 4 * FINAL_RADIUS ** 2), dtype=np.uint8)
-#
-#     def next_idx(self):
-#         if self.data.shape[0] <= self.next_idx_:
-#             self.data = np.vstack((self.data, self.empty_data_chunk()))
-#         self.next_idx_ += 1
-#         return self.next_idx_ - 1
 
-
-class DataFrameForCornersClassifier:
-    def __init__(self):
+class BaseDataFrameClassifier:
+    """template for classifying """
+    def __init__(self, data_size):
         np.random.seed(514229)
         self.step = 1000
-        # self.pxs = ['px' + str(_) for _ in range(4 * CORNER_RADIUS ** 2)]
         self.data = self.empty_data_chunk()
-        # self.df = pd.DataFrame(columns=(['image_id',
-        #                                  'image_width',
-        #                                  'image_height',
-        #                                  'source_x',
-        #                                  'source_y',
-        #                                  'source_corner_height',
-        #                                  'source_corner_width',
-        #                                  'angle',
-        #                                  'direction',
-        #                                  'offset_x',
-        #                                  'offset_y'] +
-        #                                 self.pxs +
-        #                                 ['label']))
         self.df = []  # now it is just list; we will convert it to pd.df later
         self.next_idx_ = 0
+        self.data_size = data_size
 
     def empty_data_chunk(self):
-        return np.zeros((self.step, 4 * FINAL_RADIUS ** 2), dtype=np.uint8)
+        return np.zeros((self.step, self.data_size), dtype=np.uint8)
 
     def next_idx(self):
         if self.data.shape[0] <= self.next_idx_:
             self.data = np.vstack((self.data, self.empty_data_chunk()))
         self.next_idx_ += 1
         return self.next_idx_ - 1
+
+    def save(self, filename):
+        pd.DataFrame(self.df).to_csv(filename, index=False)
+        np.save(filename + '.data', self.data[:self.next_idx_])
+
+
+class DataFrameForCornersClassifier(BaseDataFrameClassifier):
+    def __init__(self):
+        super().__init__(data_size=4 * FINAL_RADIUS ** 2)
 
     def append_rotated_8_directions(self, corner_row, corner_array_2d):
         corner_array_app = corner_array_2d.copy()
@@ -324,10 +302,6 @@ class DataFrameForCornersClassifier:
             del corner_image
         del white_filled
 
-    def save(self, filename):
-        pd.DataFrame(self.df).to_csv(filename, index=False)
-        np.save(filename + '.data', self.data[:self.next_idx_])
-
 
 def edge_extract(image: Image, point_from: tuple, point_to: tuple, edge_width: int):
     edge = image.crop((min(point_from[0], point_to[0]) - 2 * edge_width,
@@ -347,9 +321,9 @@ def edge_extract(image: Image, point_from: tuple, point_to: tuple, edge_width: i
     edge = edge.rotate(angle=angle, expand=True)
     edge = invert(edge)
     new_center = np.array(edge.size) // 2
-    edge = edge.crop((new_center[0] - edge_width,
+    edge = edge.crop((new_center[0] - edge_width / 2,
                       new_center[1] - int(edge_len / 2),
-                      new_center[0] + edge_width,
+                      new_center[0] + edge_width / 2,
                       new_center[1] + int(edge_len / 2)))
     return edge
 
@@ -367,8 +341,8 @@ def check_if_edge(start: int, end: int, corners: list, edges: dict) -> bool:
     """
 
     def line_len(start_corner: int, end_corner: int):
-        return ((corners[start_corner][0] - corners[end_corner][0]) ** 2 +
-                (corners[start_corner][1] - corners[end_corner][1]) ** 2)
+        return np.sqrt((corners[start_corner][0] - corners[end_corner][0]) ** 2 +
+                       (corners[start_corner][1] - corners[end_corner][1]) ** 2)
 
     # simple check: maybe there is one direct edge
     if end in edges[start]:
@@ -376,8 +350,6 @@ def check_if_edge(start: int, end: int, corners: list, edges: dict) -> bool:
 
     FAKE_DISTANCE = 1e15
     # the nodes are connected if distance between them is almost the same as the direct distance
-    # We calculate not the distance itself bu the square of distance
-    ALLOWED_THRESHOLD = 1.02 ** 2
 
     direct_distance = line_len(start, end)
 
@@ -398,7 +370,7 @@ def check_if_edge(start: int, end: int, corners: list, edges: dict) -> bool:
             # no unmarked corners within start component
             return False
 
-        if min_distance > direct_distance * ALLOWED_THRESHOLD:
+        if min_distance > direct_distance * IS_EDGE_ALLOWED_THRESHOLD:
             # we are already too far from the start point
             return False
 
@@ -414,22 +386,9 @@ def check_if_edge(start: int, end: int, corners: list, edges: dict) -> bool:
         marked[current_corner] = True
 
 
-class DataFrameForEdgesClassifier:
+class DataFrameForEdgesClassifier(BaseDataFrameClassifier):
     def __init__(self):
-        np.random.seed(514229)
-        self.step = 1000
-        self.data = self.empty_data_chunk()
-        self.df = []  # now it is just list; we will convert it to pd.df later
-        self.next_idx_ = 0
-
-    def empty_data_chunk(self):
-        return np.zeros((self.step, EDGE_FINAL_LENGTH * EDGE_FINAL_WIDTH), dtype=np.uint8)
-
-    def next_idx(self):
-        if self.data.shape[0] <= self.next_idx_:
-            self.data = np.vstack((self.data, self.empty_data_chunk()))
-        self.next_idx_ += 1
-        return self.next_idx_ - 1
+        super().__init__(data_size=EDGE_FINAL_LENGTH * EDGE_FINAL_WIDTH)
 
     def append_rotated_4_directions(self, edge_row, edge_array_2d):
         edge_array_app = edge_array_2d.copy()
@@ -451,10 +410,10 @@ class DataFrameForEdgesClassifier:
     def append(self, image, image_id, corners, edges):
         """
         appends every edge to df
-        :param image:
-        :param image_id:
-        :param corners:
-        :param edges:
+        :param image: Image object
+        :param image_id: id of image, saved to df
+        :param corners: list of corner points: [(x1,y1), .., (xn,yn)]
+        :param edges: dict of edges: {0:[1,2,3], ..}
         :return: None
         """
         border_size = 2 * CORNER_RADIUS
@@ -491,8 +450,9 @@ class DataFrameForEdgesClassifier:
                 edge_image = edge_extract(white_filled,
                                           point_from,
                                           point_to,
-                                          edge_width=edge_width).resize((EDGE_FINAL_WIDTH,
-                                                                        EDGE_FINAL_LENGTH))
+                                          edge_width=edge_width)
+                edge_image = edge_image.resize((EDGE_FINAL_WIDTH,
+                                                EDGE_FINAL_LENGTH))
                 edge_array = np.array(edge_image.getdata()).reshape(edge_image.size[::-1])  # h,w
                 # print('edge received, ', edge_array.shape)
                 self.append_rotated_4_directions(edge_row, edge_array)
@@ -503,7 +463,3 @@ class DataFrameForEdgesClassifier:
 
         del bordered_corners
         del white_filled
-
-    def save(self, filename):
-        pd.DataFrame(self.df).to_csv(filename, index=False)
-        np.save(filename + '.data', self.data[:self.next_idx_])
