@@ -4,17 +4,11 @@ from PIL import Image
 from tqdm import tqdm
 
 from config import DB_FILE_PATH
-from data_cleaning.graph import cluster_points, transform_edges, link_points_to_nearest_edge, add_all_intersections
+from data_cleaning.graph import clean_markdown
 from app.models import load_image_from_url, transform_image
 from data_cleaning.images import save_corners, save_image, transform_corners, DataFrameForCornersClassifier, clean_image, \
     DataFrameForEdgesClassifier
-
-
-def json_int_serialize(obj):
-    if isinstance(obj, int):
-        return str(obj)
-    raise TypeError("Type not serializable")
-
+from utils import build_new_markdown, json_int_serialize
 
 if __name__ == '__main__':
     np.random.seed(123)
@@ -62,55 +56,16 @@ if __name__ == '__main__':
                 prev_point = points_counter
                 points_counter += 1
 
-        # =======================
-        # clean the data:
-
-        # 1. add all intersections between edges
-        # [(x1, y1),..] , {1:[2,3,4],..} <= [(x1, y1),..] , {1:[2,3,4],..}
-        new_points, new_edges = add_all_intersections(old_points, old_edges)
-
-        # 2. cluster points
-        # 3. transform edges with transformation dict
-        # [(x1,y1),..], {(x1,y1):(xi,yi),..} <= [(x1,y1),..]
-        clustered_points, transformation_dict = cluster_points(new_points)
-        # {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}, [(x1,y1),..], {(x1,y1):(xi,yi),..}
-        new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
-
-        # 4. for every point we seek for the nearest edge and link it here
-        # [(x1,y1),..], {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}
-        new_points, new_edges = link_points_to_nearest_edge(clustered_points, new_edges)
-
-        # 5, 6. repeat clustering
-        # [(x1,y1),..], {(x1,y1):(xi,yi),..} <= [(x1,y1),..]
-        clustered_points, transformation_dict = cluster_points(new_points)
-        # {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}, [(x1,y1),..], {(x1,y1):(xi,yi),..}
-        new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
-        # cleaning finished
-        # =======================
+        # clean the data
+        clustered_points, new_edges = clean_markdown(old_points, old_edges)
 
         # save
         clustered_only_json[image_id] = {'clustered': {'points': clustered_points,
                                                        'edges': new_edges}}
         # save as db-markdown
         web_service_new_db_json[image_id] = db_json[image_id]
-        new_markdown = {}
-        segment_counter = 0
-        for point_from in new_edges:
-            for point_to in new_edges[point_from]:
-                if point_to < point_from:
-                    continue
-                new_markdown[str(segment_counter)] = {"type": "segment",
-                                                      "path": [
-                                                          {
-                                                              "x": clustered_points[point_from][0],
-                                                              "y": clustered_points[point_from][1]
-                                                          },
-                                                          {
-                                                              "x": clustered_points[point_to][0],
-                                                              "y": clustered_points[point_to][1]
-                                                          }
-                                                      ]}
-                segment_counter += 1
+
+        new_markdown = build_new_markdown(clustered_points, new_edges)
 
         web_service_new_db_json[image_id]['markdown'] = new_markdown
 

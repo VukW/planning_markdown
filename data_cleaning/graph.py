@@ -45,7 +45,7 @@ def line_from_two_points(point1, point2):
     return a, b, c
 
 
-def cluster_points(points):
+def cluster_points(points, clustering_dist=CLUSTERING_DIST):
     """Объединяет рядом лежащие точки в единый кластер
     :param points: list of points, [(x1, y1), .., (xn, yn)]
     :return clustered_points: list of clustered points, [(x1, y1), .., (xk, yk)]
@@ -60,7 +60,7 @@ def cluster_points(points):
         for ic in range(len(clusters)):
             cluster = clusters[ic]
             for point2 in cluster:
-                if dist(point1, point2) < CLUSTERING_DIST:
+                if dist(point1, point2) < clustering_dist:
                     new_cluster += cluster
                     clusters[ic] = []
                     break
@@ -278,3 +278,37 @@ def add_all_intersections(old_points, old_edges):
             prev_point = edge_split['pos']
 
     return new_points, edges_list_to_dict(new_edges)
+
+
+def clean_markdown(old_points, old_edges):
+    """
+    cleans the data
+    :param old_points: [(x1,y1),..]
+    :param old_edges: {0:[1,2,3],..}
+    :return: clustered points and new edges in the same format
+    """
+    # =======================
+    # clean the data:
+
+    # 1. add all intersections between edges
+    # [(x1, y1),..] , {1:[2,3,4],..} <= [(x1, y1),..] , {1:[2,3,4],..}
+    new_points, new_edges = add_all_intersections(old_points, old_edges)
+
+    # 2. cluster points
+    # 3. transform edges with transformation dict
+    # [(x1,y1),..], {(x1,y1):(xi,yi),..} <= [(x1,y1),..]
+    clustered_points, transformation_dict = cluster_points(new_points)
+    # {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}, [(x1,y1),..], {(x1,y1):(xi,yi),..}
+    new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
+
+    # 4. for every point we seek for the nearest edge and link it here
+    # [(x1,y1),..], {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}
+    new_points, new_edges = link_points_to_nearest_edge(clustered_points, new_edges)
+
+    # 5, 6. repeat clustering
+    # [(x1,y1),..], {(x1,y1):(xi,yi),..} <= [(x1,y1),..]
+    clustered_points, transformation_dict = cluster_points(new_points)
+    # {1:[2,3,4],..} <= [(x1,y1),..], {1:[2,3,4],..}, [(x1,y1),..], {(x1,y1):(xi,yi),..}
+    new_edges = transform_edges(new_points, new_edges, clustered_points, transformation_dict)
+    # cleaning finished
+    # =======================

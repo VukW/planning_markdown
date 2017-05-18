@@ -124,6 +124,15 @@ def clean_image(image):
     return Image.fromarray(data, mode='L')
 
 
+def white_bordered_image(image, border_size):
+    white_filled = Image.new('L',
+                             (image.size[0] + 2 * border_size,
+                              image.size[1] + 2 * border_size),
+                             color=255)
+    white_filled.paste(image, (border_size, border_size))
+    return white_filled
+
+
 class BaseDataFrameClassifier:
     """template for classifying """
     def __init__(self, data_size):
@@ -172,11 +181,7 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
         # add white borders to image
         # print('appending image', image_id)
         border_size = 2 * CORNER_RADIUS
-        white_filled = Image.new('L',
-                                 (image.size[0] + 2 * border_size,
-                                  image.size[1] + 2 * border_size),
-                                 color=255)
-        white_filled.paste(image, (border_size, border_size))
+        white_filled = white_bordered_image(image, border_size)
 
         for ic, corner_old in enumerate(corners):
             # print('corner', corner_old)
@@ -417,11 +422,7 @@ class DataFrameForEdgesClassifier(BaseDataFrameClassifier):
         :return: None
         """
         border_size = 2 * CORNER_RADIUS
-        white_filled = Image.new('L',
-                                 (image.size[0] + 2 * border_size,
-                                  image.size[1] + 2 * border_size),
-                                 color=255)
-        white_filled.paste(image, (border_size, border_size))
+        white_filled = white_bordered_image(image, border_size)
 
         bordered_corners = np.array(corners) + (border_size, border_size)
 
