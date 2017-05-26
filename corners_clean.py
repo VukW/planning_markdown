@@ -1,9 +1,9 @@
 import json
 import numpy as np
-from PIL import Image
 from tqdm import tqdm
 
-from config import DB_FILE_PATH
+from config import DB_FILE_PATH, CLEAN_SAVE_CLUSTERED_GRAPH, CLEAN_SAVE_CLUSTERED_GRAPH_FOR_WEB_SERVICE, CLEAN_SAVE_CORNERS_DF, \
+    CLEAN_SAVE_EDGES_DF
 from data_cleaning.graph import clean_markdown
 from app.models import load_image_from_url, transform_image
 from data_cleaning.images import save_corners, save_image, transform_corners, DataFrameForCornersClassifier, clean_image, \
@@ -26,7 +26,6 @@ if __name__ == '__main__':
     classified_edges_df = DataFrameForEdgesClassifier()
     # for every point
     keys = sorted(list(db_json.keys()))
-    # for ic, image_id in tqdm(enumerate(db_json)):
     progress_bar = tqdm(total=300)
     for ic, image_id in enumerate(keys):
         # get markdown
@@ -83,13 +82,13 @@ if __name__ == '__main__':
 
     # saving cleaned jsons
     # clustered format
-    with open(DB_FILE_PATH + '.clustered', 'w') as f:
+    with open(CLEAN_SAVE_CLUSTERED_GRAPH, 'w') as f:
         print(json.dumps(clustered_only_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
 
     # save clean graph as db-markdown format (for web service)
-    with open(DB_FILE_PATH + '-cleaned.json', 'w') as f:
+    with open(CLEAN_SAVE_CLUSTERED_GRAPH_FOR_WEB_SERVICE, 'w') as f:
         print(json.dumps(web_service_new_db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
 
     # classifier
-    classified_corners_df.save(DB_FILE_PATH + '-corners-df.csv')
-    classified_edges_df.save(DB_FILE_PATH + '-edges-df.csv')
+    classified_corners_df.save(CLEAN_SAVE_CORNERS_DF)
+    classified_edges_df.save(CLEAN_SAVE_EDGES_DF)

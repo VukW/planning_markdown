@@ -1,26 +1,25 @@
 from tqdm import tqdm
 
 from app.models import transform_image
-from config import DB_FILE_PATH
+from config import DB_FILE_PATH, MODELS_EDGES_MODEL, MODELS_CORNERS_MODEL, MODELS_EDGES_THRESHOLD, \
+    MODELS_CORNERS_THRESHOLD, MODELS_CLUSTERING_DIST, MODELS_SAVE_PREDICTION
 from data_cleaning.graph import cluster_points, clean_markdown
 from data_cleaning.images import clean_image
 from models import ModelCorners, ModelEdges
-from utils import load_image_from_url, build_new_markdown, json_int_serialize, draw_points
+from utils import load_image_from_url, build_new_markdown, json_int_serialize
 import numpy as np
-from PIL import Image
 import json
 
 if __name__ == "__main__":
     np.random.seed(123)
-    DB_FILE_PATH = "saved_markdowns.json"
     # read db file
     with open(DB_FILE_PATH, 'r') as f_to_read_json:
         db_json = json.loads(f_to_read_json.read())
 
-    model_corners = ModelCorners(threshold=0.98)
-    model_edges = ModelEdges(threshold=0.88)
-    model_corners.load("models/keras_cifar_corners.model")
-    model_edges.load("models/keras_cifar_edges.model")
+    model_corners = ModelCorners(threshold=MODELS_CORNERS_THRESHOLD )
+    model_edges = ModelEdges(threshold=MODELS_EDGES_THRESHOLD)
+    model_corners.load(MODELS_CORNERS_MODEL)
+    model_edges.load(MODELS_EDGES_MODEL)
 
     keys = sorted(list(db_json.keys()), key=int)
     for ic, image_id in enumerate(tqdm(keys)):
@@ -45,7 +44,7 @@ if __name__ == "__main__":
         print('predict corners..')
         points = model_corners.predict(image, step=1)
         print('cluster {0} points...'.format(len(points)))
-        points = cluster_points(points, clustering_dist=5)[0]
+        points = cluster_points(points, clustering_dist=MODELS_CLUSTERING_DIST)[0]
         print('got {0} clustered points, predict edges..'.format(len(points)))
         # print(points)
         edges = model_edges.predict(image, points)
@@ -58,7 +57,7 @@ if __name__ == "__main__":
 
         # save new markdown to file
         if ic % 1 == 0:
-            with open(DB_FILE_PATH + '-predicted.json', 'w') as f:
+            with open(MODELS_SAVE_PREDICTION, 'w') as f:
                 print(json.dumps(db_json, indent=4, sort_keys=True, default=json_int_serialize), file=f)
 
         # if ic == 10:

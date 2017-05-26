@@ -3,7 +3,8 @@ from PIL import Image
 import numpy as np
 from tqdm import tqdm
 
-from data_cleaning.images import CORNER_RADIUS, FINAL_RADIUS, white_bordered_image, edge_extract, EDGE_WIDTH, \
+from config import CORNER_FINAL_SIZE, BORDER_SIZE
+from data_cleaning.images import CORNER_RADIUS, white_bordered_image, edge_extract, EDGE_WIDTH, \
     EDGE_FINAL_WIDTH, EDGE_FINAL_LENGTH
 
 
@@ -23,14 +24,14 @@ class ModelBase:
 class ModelCorners(ModelBase):
     def predict(self, image, step=1):
 
-        border_size = 2 * CORNER_RADIUS
+        border_size = BORDER_SIZE
         white_filled = white_bordered_image(image, border_size)
 
         stepped_w = int(np.ceil(image.size[0] / step))
         stepped_h = int(np.ceil(image.size[1] / step))
         data = np.zeros((stepped_w * stepped_h,
-                         FINAL_RADIUS * 2,
-                         FINAL_RADIUS * 2,
+                         CORNER_FINAL_SIZE,
+                         CORNER_FINAL_SIZE,
                          1))
 
         for ic in tqdm(range(0, image.size[1], step)):
@@ -39,9 +40,9 @@ class ModelCorners(ModelBase):
                                                           ic - CORNER_RADIUS + border_size,
                                                           jc + CORNER_RADIUS + border_size,
                                                           ic + CORNER_RADIUS + border_size))
-                                       .resize((FINAL_RADIUS * 2,
-                                                FINAL_RADIUS * 2))
-                                       .getdata()).reshape((1, FINAL_RADIUS * 2, FINAL_RADIUS * 2, 1)) / 255.0
+                                       .resize((CORNER_FINAL_SIZE,
+                                                CORNER_FINAL_SIZE))
+                                       .getdata()).reshape((1, CORNER_FINAL_SIZE, CORNER_FINAL_SIZE, 1)) / 255.0
                 data[ic // step * stepped_w + jc // step] = test_corner
 
         y_pred = self.model.predict_proba(data, verbose=0)
@@ -60,7 +61,7 @@ class ModelEdges(ModelBase):
     def predict(self, image, points):
         edges = {ic: [] for ic in range(len(points))}
 
-        border_size = 2 * CORNER_RADIUS
+        border_size = BORDER_SIZE
         white_filled = white_bordered_image(image, border_size)
 
         corrected_points = [tuple(np.array(p) + [border_size, border_size]) for p in points]

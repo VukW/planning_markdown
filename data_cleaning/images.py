@@ -3,22 +3,15 @@ from os.path import join
 import numpy as np
 import pandas as pd
 from PIL.ImageOps import invert
-from utils import draw_points
 
-TRANSFORMED_IMAGES_FOLDER = '../images'
-CORNER_RADIUS = 32  # neighbourhood of this radius is taken for each corner point
-FINAL_RADIUS = 12  # corners are resized to this radius (to decrease dimensionality)
-CORNERS_TRANSFORMATIONS = 6  # data augmentation. Each corner is randomly transformed this times
-FLAT_CORNER_COSINE = -0.1  # if the cosine between two edges is lower, then angle is flat
-BLACK_THRESHOLD = 192  # we left only pixels darker than this
-EDGE_WIDTH = 20
-EDGE_FINAL_WIDTH = 12
-EDGE_FINAL_LENGTH = 30
-IS_EDGE_ALLOWED_THRESHOLD = 1.02
-EDGE_TRANSFORMATIONS = 2
+from config import IS_EDGE_ALLOWED_THRESHOLD, EDGE_FINAL_LENGTH, EDGE_FINAL_WIDTH, CORNER_RADIUS, \
+    EDGE_TRANSFORMATIONS_NUM, EDGE_WIDTH, EDGE_RANDOM_SCALE, CORNER_SIZE, CORNERS_TRANSFORMATIONS_NUM, \
+    CORNER_RANDOM_SCALE, CORNER_RANDOM_ROTATE, CORNER_RANDOM_OFFSET, CORNER_0_CLASS_BLACK_PROP, CORNER_FINAL_RADIUS, \
+    CORNER_FLAT_COSINE, BLACK_THRESHOLD, CLEAN_SAVE_TRANSFORMED_IMAGES_FOLDER, BORDER_SIZE
+
 
 def save_image(image, image_id):
-    image.save(join(TRANSFORMED_IMAGES_FOLDER,
+    image.save(join(CLEAN_SAVE_TRANSFORMED_IMAGES_FOLDER,
                     image_id + '.png'), "PNG")
 
 
@@ -33,9 +26,9 @@ def save_corners(image, image_id, corners):
         bottom = min(height, corner[1] + CORNER_RADIUS)
         image_alpha[up:bottom, left:right] = 255
 
-        image.crop((left, up, right, bottom)).save(join(TRANSFORMED_IMAGES_FOLDER,
+        image.crop((left, up, right, bottom)).save(join(CLEAN_SAVE_TRANSFORMED_IMAGES_FOLDER,
                                                         image_id + '-' + str(ic) + '.png'), "PNG")
-    Image.fromarray(image_alpha.astype('uint8'), mode='L').save(join(TRANSFORMED_IMAGES_FOLDER,
+    Image.fromarray(image_alpha.astype('uint8'), mode='L').save(join(CLEAN_SAVE_TRANSFORMED_IMAGES_FOLDER,
                                                                      image_id + '-alpha.png'), "PNG")
 
 
@@ -92,7 +85,7 @@ def corner_randomly_transform(image, corner,
                                      draft_image.size[1] // 2 + y_radius))
 
     # scale
-    return corner_image.resize((FINAL_RADIUS * 2, FINAL_RADIUS * 2))
+    return corner_image.resize((CORNER_FINAL_RADIUS * 2, CORNER_FINAL_RADIUS * 2))
 
 
 def get_corner_label(corner_no, corners, edges):
@@ -113,7 +106,7 @@ def get_corner_label(corner_no, corners, edges):
 
     vect_ab = b - a
     vect_bc = c - b
-    if np.dot(vect_ab, vect_bc) < FLAT_CORNER_COSINE * np.linalg.norm(vect_ab) * np.linalg.norm(vect_bc):
+    if np.dot(vect_ab, vect_bc) < CORNER_FLAT_COSINE * np.linalg.norm(vect_ab) * np.linalg.norm(vect_bc):
         return 1  # the corner is flat
     else:
         return 3  # 2-neighboured class
@@ -160,14 +153,13 @@ class BaseDataFrameClassifier:
 
 class DataFrameForCornersClassifier(BaseDataFrameClassifier):
     def __init__(self):
-        super().__init__(data_size=4 * FINAL_RADIUS ** 2)
+        super().__init__(data_size=4 * CORNER_FINAL_RADIUS ** 2)
 
     def append_rotated_8_directions(self, corner_row, corner_array_2d):
         corner_array_app = corner_array_2d.copy()
         for direction in range(8):
             corner_row_app = corner_row.copy()
             corner_row_app['direction'] = direction
-            # corner_row_app.update(dict(zip(self.pxs, corner_array_app.reshape(-1))))
             row_idx = self.next_idx()
             self.data[row_idx] = corner_array_app.reshape(-1)
             self.df.append(corner_row_app)
@@ -181,7 +173,7 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
     def append(self, image, image_id, corners, edges):
         # add white borders to image
         # print('appending image', image_id)
-        border_size = 2 * CORNER_RADIUS
+        border_size = BORDER_SIZE
         white_filled = white_bordered_image(image, border_size)
 
         for ic, corner_old in enumerate(corners):
@@ -197,8 +189,8 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
 
             # add original corner
             corner_row = corner_base.copy()
-            corner_row['source_corner_height'] = CORNER_RADIUS * 2
-            corner_row['source_corner_width'] = CORNER_RADIUS * 2
+            corner_row['source_corner_height'] = CORNER_SIZE
+            corner_row['source_corner_width'] = CORNER_SIZE
             corner_row['angle'] = 0
             corner_row['offset_x'] = 0
             corner_row['offset_y'] = 0
@@ -211,15 +203,19 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
             del corner_image
             del corner_array
 
-            for _ in range(CORNERS_TRANSFORMATIONS):
+            for _ in range(CORNERS_TRANSFORMATIONS_NUM):
                 # print('corner transformations', _)
-                # случайная трансформация
+                # random transformation
                 corner_row = corner_base.copy()
-                corner_row['source_corner_height'] = int(CORNER_RADIUS * 2 * random_scale_coeff(0.5, 1.5))
-                corner_row['source_corner_width'] = int(CORNER_RADIUS * 2 * random_scale_coeff(0.5, 1.5))
-                corner_row['angle'] = random_offset_coeff(45)
-                corner_row['offset_x'] = int(random_offset_coeff(CORNER_RADIUS / 5))
-                corner_row['offset_y'] = int(random_offset_coeff(CORNER_RADIUS / 5))
+                corner_row['source_corner_height'] = int(CORNER_SIZE *
+                                                         random_scale_coeff(from_=CORNER_RANDOM_SCALE[0],
+                                                                            to_=CORNER_RANDOM_SCALE[1]))
+                corner_row['source_corner_width'] = int(CORNER_SIZE *
+                                                        random_scale_coeff(from_=CORNER_RANDOM_SCALE[0],
+                                                                           to_=CORNER_RANDOM_SCALE[1]))
+                corner_row['angle'] = random_offset_coeff(CORNER_RANDOM_ROTATE)
+                corner_row['offset_x'] = int(random_offset_coeff(CORNER_RANDOM_OFFSET))
+                corner_row['offset_y'] = int(random_offset_coeff(CORNER_RANDOM_OFFSET))
                 corner_image = corner_randomly_transform(white_filled,
                                                          corner,
                                                          offset_x=corner_row['offset_x'],
@@ -270,7 +266,7 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
                 del corner_array
                 del corner_image
 
-        while not_a_corners < len(corners) * (CORNERS_TRANSFORMATIONS + 1):
+        while not_a_corners < len(corners) * (CORNERS_TRANSFORMATIONS_NUM + 1):
             random_point = np.array([np.random.randint(image.size[0]),
                                      np.random.randint(image.size[1])])
             # check that point is far enough from real corners
@@ -286,8 +282,8 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
                                 random_point[0] + CORNER_RADIUS,
                                 random_point[1] + CORNER_RADIUS))
                          .getdata())
-                .reshape((CORNER_RADIUS * 2, CORNER_RADIUS * 2))
-                    .mean()) < 255 * 0.05:  # at least 5% of the area should be filled
+                .reshape((CORNER_SIZE, CORNER_SIZE))
+                    .mean()) < 255 * CORNER_0_CLASS_BLACK_PROP:  # at least 5% of the area should be filled
                 continue
             corner_row = corner_base.copy()
             corner_row['source_x'] = random_point[0]
@@ -406,7 +402,7 @@ class DataFrameForEdgesClassifier(BaseDataFrameClassifier):
             self.data[row_idx] = edge_array_app.reshape(-1)
             self.df.append(edge_row_app)
             if direction == 1:
-                # mirror corner
+                # mirror edge
                 edge_array_app = edge_array_app[::-1, :]
             else:
                 edge_array_app = edge_array_app[:, ::-1]
@@ -422,13 +418,12 @@ class DataFrameForEdgesClassifier(BaseDataFrameClassifier):
         :param edges: dict of edges: {0:[1,2,3], ..}
         :return: None
         """
-        border_size = 2 * CORNER_RADIUS
+        border_size = BORDER_SIZE
         white_filled = white_bordered_image(image, border_size)
 
         bordered_corners = np.array(corners) + (border_size, border_size)
 
         for ic, point_from in enumerate(bordered_corners):
-            # print('corner', corner_old)
             for jc, point_to in enumerate(bordered_corners[ic + 1:], start=ic + 1):
                 if check_if_edge(ic, jc, corners, edges):
                     right_answer = 1
@@ -445,13 +440,14 @@ class DataFrameForEdgesClassifier(BaseDataFrameClassifier):
                              'label': right_answer}
 
                 # add original edge
-                for _ in range(EDGE_TRANSFORMATIONS):
+                for _ in range(EDGE_TRANSFORMATIONS_NUM):
                     edge_row = edge_base.copy()
                     edge_row['source_edge_len'] = np.linalg.norm(np.array(point_to) - np.array(point_from))
                     if _ == 0:
                         edge_width = EDGE_WIDTH
                     else:
-                        edge_width = int(EDGE_WIDTH * random_scale_coeff(0.9, 2))
+                        edge_width = int(EDGE_WIDTH * random_scale_coeff(from_=EDGE_RANDOM_SCALE[0],
+                                                                         to_=EDGE_RANDOM_SCALE[1]))
                     edge_row['source_edge_width'] = edge_width
                     edge_image = edge_extract(white_filled,
                                               point_from,
