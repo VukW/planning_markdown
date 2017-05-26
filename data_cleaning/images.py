@@ -15,7 +15,7 @@ EDGE_WIDTH = 20
 EDGE_FINAL_WIDTH = 12
 EDGE_FINAL_LENGTH = 30
 IS_EDGE_ALLOWED_THRESHOLD = 1.02
-
+EDGE_TRANSFORMATIONS = 2
 
 def save_image(image, image_id):
     image.save(join(TRANSFORMED_IMAGES_FOLDER,
@@ -218,8 +218,8 @@ class DataFrameForCornersClassifier(BaseDataFrameClassifier):
                 corner_row['source_corner_height'] = int(CORNER_RADIUS * 2 * random_scale_coeff(0.5, 1.5))
                 corner_row['source_corner_width'] = int(CORNER_RADIUS * 2 * random_scale_coeff(0.5, 1.5))
                 corner_row['angle'] = random_offset_coeff(45)
-                corner_row['offset_x'] = int(random_offset_coeff(CORNER_RADIUS / 4))
-                corner_row['offset_y'] = int(random_offset_coeff(CORNER_RADIUS / 4))
+                corner_row['offset_x'] = int(random_offset_coeff(CORNER_RADIUS / 5))
+                corner_row['offset_y'] = int(random_offset_coeff(CORNER_RADIUS / 5))
                 corner_image = corner_randomly_transform(white_filled,
                                                          corner,
                                                          offset_x=corner_row['offset_x'],
@@ -445,23 +445,27 @@ class DataFrameForEdgesClassifier(BaseDataFrameClassifier):
                              'label': right_answer}
 
                 # add original edge
-                edge_row = edge_base.copy()
-                edge_row['source_edge_len'] = np.linalg.norm(np.array(point_to) - np.array(point_from))
-                edge_width = int(EDGE_WIDTH * random_scale_coeff(0.9, 2))
-                edge_row['source_edge_width'] = edge_width
-                edge_image = edge_extract(white_filled,
-                                          point_from,
-                                          point_to,
-                                          edge_width=edge_width)
-                edge_image = edge_image.resize((EDGE_FINAL_WIDTH,
-                                                EDGE_FINAL_LENGTH))
-                edge_array = np.array(edge_image.getdata()).reshape(edge_image.size[::-1])  # h,w
-                # print('edge received, ', edge_array.shape)
-                self.append_rotated_4_directions(edge_row, edge_array)
+                for _ in range(EDGE_TRANSFORMATIONS):
+                    edge_row = edge_base.copy()
+                    edge_row['source_edge_len'] = np.linalg.norm(np.array(point_to) - np.array(point_from))
+                    if _ == 0:
+                        edge_width = EDGE_WIDTH
+                    else:
+                        edge_width = int(EDGE_WIDTH * random_scale_coeff(0.9, 2))
+                    edge_row['source_edge_width'] = edge_width
+                    edge_image = edge_extract(white_filled,
+                                              point_from,
+                                              point_to,
+                                              edge_width=edge_width)
+                    edge_image = edge_image.resize((EDGE_FINAL_WIDTH,
+                                                    EDGE_FINAL_LENGTH))
+                    edge_array = np.array(edge_image.getdata()).reshape(edge_image.size[::-1])  # h,w
+                    # print('edge received, ', edge_array.shape)
+                    self.append_rotated_4_directions(edge_row, edge_array)
 
-                del edge_row
-                del edge_image
-                del edge_array
+                    del edge_row
+                    del edge_image
+                    del edge_array
 
         del bordered_corners
         del white_filled

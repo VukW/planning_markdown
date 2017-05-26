@@ -18,7 +18,7 @@ if __name__ == "__main__":
         db_json = json.loads(f_to_read_json.read())
 
     model_corners = ModelCorners(threshold=0.98)
-    model_edges = ModelEdges(threshold=0.9)
+    model_edges = ModelEdges(threshold=0.88)
     model_corners.load("models/keras_cifar_corners.model")
     model_edges.load("models/keras_cifar_edges.model")
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         image = clean_image(image)
         # predict markdown
         print('predict corners..')
-        points = model_corners.predict(image, step=2)
+        points = model_corners.predict(image, step=1)
         print('cluster {0} points...'.format(len(points)))
         points = cluster_points(points, clustering_dist=5)[0]
         print('got {0} clustered points, predict edges..'.format(len(points)))
