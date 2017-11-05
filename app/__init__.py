@@ -9,6 +9,12 @@ Bootstrap(app)
 app.config['BOOTSTRAP_SERVE_LOCAL'] = True
 
 
+@app.after_request
+def add_header(response):
+    response.cache_control.max_age = 0
+    return response
+
+
 def json_datetime_serialize(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, datetime):
@@ -19,7 +25,6 @@ def json_datetime_serialize(obj):
 
 
 class DbJson:
-
     def __init__(self, file_name):
         self.file_name = file_name
         self.db_json_dict = {}
@@ -28,7 +33,11 @@ class DbJson:
                 self.db_json_dict = json.loads(f_to_read_json.read())
         except FileNotFoundError:
             pass
-        self._current_id = max([0] + [int(k) for k in self.db_json_dict.keys()])
+        self._max_id = max([0] + [int(k) for k in self.db_json_dict.keys()])
+
+    @property
+    def max_id(self):
+        return self._max_id
 
     # only markdown is returned
     def __getitem__(self, image_id):
@@ -45,8 +54,8 @@ class DbJson:
         self.save()
 
     def generate_next_id(self):
-        new_id = self._current_id
-        self._current_id += 1
+        new_id = self._max_id
+        self._max_id += 1
         return new_id
 
     def all(self):
@@ -79,12 +88,14 @@ def init_marked_hashes(db):
             res[image_hash] = res.get(image_hash, []) + [int(image_id)]
     return res
 
+
 db = DbJson(DB_FILE_PATH)
 db.init_from_urls(DB_INIT_URLS_LIST)
 
 marked_hashes = init_marked_hashes(db)
 
 from app.models import ImagesToMark
+
 images = ImagesToMark()
 
 from app.controllers import main_page_module

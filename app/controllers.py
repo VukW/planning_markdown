@@ -1,6 +1,7 @@
 from app import app, db, images
 from io import BytesIO
 from flask import send_file, redirect, jsonify, request, abort, Blueprint, render_template
+from config import NEXT_UNMARKED_ONLY
 
 main_page_module = Blueprint('main_page', __name__, url_prefix='/')
 
@@ -27,14 +28,17 @@ def get_duplicate(image_id):
 
 @app.route('/image/<int:image_id>')
 def get_image(image_id):
-        return serve_pil_image(images[image_id].image)
+    return serve_pil_image(images[image_id].image)
 
 
 def get_next_image_id(start=-1):
-    for image_id in range(start + 1, 1000000):
+    for image_id in range(start + 1, db.max_id + 1):
         image = images[image_id]
-        if (not image.locked) and (image.markdown == {}) and not image.duplicate:
+        if ((not image.locked)
+                and (not NEXT_UNMARKED_ONLY or (image.markdown == {}))
+                and not image.duplicate):
             return image_id
+    return 0
 
 
 @app.route('/next')
@@ -72,7 +76,7 @@ def all_saved_markdowns():
 @app.route('/')
 def root():
     next_image_id_ = get_next_image_id()
-    return redirect('/'+str(next_image_id_))
+    return redirect('/' + str(next_image_id_))
 
 
 @app.route('/<int:image_id>')
