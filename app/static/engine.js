@@ -59,6 +59,7 @@ var nextButton = document.getElementById("next");
 var duplicateButton = document.getElementById("duplicate");
 var zoomInButton = document.getElementById("zoom-in");
 var zoomOutButton = document.getElementById("zoom-out");
+var areaInput = document.getElementById("area");
 
 var imageObj = new Image();
 imageObj.onload = function () {
@@ -67,6 +68,10 @@ imageObj.onload = function () {
     var initialScale = Math.min(imageCanvas.width / imageObj.width, imageCanvas.height / imageObj.height);
     scale = initialScale;
     innerOffset = new Point(markCanvas.width / 2, markCanvas.height / 2);
+    if (!("area" in elements)) {
+        elements.area = 0.0;
+    }
+    areaInput.value = 0.0;
     redraw(true);
 }
 imageObj.src = image_src;
@@ -160,6 +165,9 @@ zoomInButton.addEventListener('click', function () {
         scale *= (1 + RELATIVE_SCALE);
     redraw(false);
 }, false);
+areaInput.addEventListener('change', function () {
+    elements.area = areaInput.value;
+}, false);
 
 function clickProcessing (e) {
     if (e.which == LEFT_MOUSE_BUTTON) {
@@ -191,7 +199,7 @@ function clickProcessing (e) {
                     case elementTypes.REGION:
                         if (!((curr.x == prev.x) || (curr.y == prev.y))) {
                             var info = drawRect(markContext, prev, curr, defaultColors[selectionMode], true);
-                            elements[current_id] = {type: "region", path: info};
+                            elements[current_id] = {type: "region", subtype: "rect_wall", path: info};
                             $("ul").append(generateLi(current_id));
                             current_id++;
                         }
@@ -333,31 +341,39 @@ function drawRect (context, start, end, lineColor, need_to_center) {
 
 function drawAll (context, build_list) {
     for (var id in elements) {
-        switch (elements[id].type) {
-            case "segment":
-                selectionMode = elementTypes.SEGMENT;
-                break;
-            case "region":
-                selectionMode = elementTypes.REGION;
-                break;
-            case "polyline":
-                selectionMode = elementTypes.POLYLINE;
-                break;
-        }
-        context.strokeStyle = defaultColors[selectionMode];
-        context.lineWidth = LINE_WIDTH;
-        context.lineCap = "round";
-        context.lineJoin = "round";
-        context.beginPath();
-        context.moveTo(elements[id].path[0].x, elements[id].path[0].y);
-        for (var number = 1; number < elements[id].path.length; number++) {
-            context.lineTo(elements[id].path[number].x, elements[id].path[number].y);
-        }
-        context.stroke();
-        context.closePath();
+        if (id != "area") {
+            switch (elements[id].type) {
+                case "segment":
+                    selectionMode = elementTypes.SEGMENT;
+                    break;
+                case "region":
+                    selectionMode = elementTypes.REGION;
+                    break;
+                case "polyline":
+                    selectionMode = elementTypes.POLYLINE;
+                    break;
+            }
+            if ((selectionMode == elementTypes.REGION) && !("subtype" in elements[id])) {
+                elements[id].subtype = "rect_wall";
+            }
+            context.strokeStyle = defaultColors[selectionMode];
+            context.lineWidth = LINE_WIDTH;
+            context.lineCap = "round";
+            context.lineJoin = "round";
+            context.beginPath();
+            context.moveTo(elements[id].path[0].x, elements[id].path[0].y);
+            for (var number = 1; number < elements[id].path.length; number++) {
+                context.lineTo(elements[id].path[number].x, elements[id].path[number].y);
+            }
+            context.stroke();
+            context.closePath();
 
-        if (build_list) {
-            $("ul").append(generateLi(id));
+            if (build_list) {
+                $("ul").append(generateLi(id));
+                if (selectionMode == elementTypes.REGION) {
+                    $("#" + id).closest(".list-group-item").children(".subtype-select").val(elements[id].subtype).change();
+                }
+            }
         }
     }
 }
@@ -418,9 +434,20 @@ $(".list-group").on('mouseleave', '.list-group-item', function () {
     clearCanvas(activeCanvas);
 });
 
+$(".list-group").on('change', '.subtype-select', function () {
+    var id = $(this).closest(".list-group-item").children(".delete-element").attr("id");
+    elements[id].subtype = $(this).val();
+})
+
 function generateLi (id) {
     liHTML = '<li class="list-group-item ' + elementNames[selectionMode].toLowerCase() + '-item sharp">';
     liHTML += elementNames[selectionMode];
+    if (selectionMode == elementTypes.REGION) {
+        liHTML += '<br><select class="subtype-select">' +
+                  '<option value="rect_wall">Wall</option>' +
+                  '<option value="rect_window">Window</option>' +
+                  '<option value="rect_door">Door</option></select>';
+    }
     liHTML += '<button class="btn btn-default delete-element" id="' + id +
               '"><span class="glyphicon glyphicon-remove"></span></button>'; + '</li>';
     return liHTML;
