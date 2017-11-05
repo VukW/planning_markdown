@@ -97,6 +97,8 @@ document.addEventListener('keyup', function (e) {
             break;
         case keys.ESC:
             idSelected = undefined;
+            markCanvas.style.visibility = 'visible';
+            activeCanvas.style.visibility = 'hidden';
             $(".active").closest('.list-group-item').removeClass('active');
         case keys.A:
             drawAlong = !drawAlong;
@@ -127,6 +129,8 @@ document.addEventListener('keyup', function (e) {
                 }
             }
             redraw(false);
+            clearCanvas(activeCanvas);
+            highlight(idSelected);
             break;
         case keys.UP:
             e.preventDefault();
@@ -141,6 +145,8 @@ document.addEventListener('keyup', function (e) {
                 }
             }
             redraw(false);
+            clearCanvas(activeCanvas);
+            highlight(idSelected);
             break;
         case keys.RIGHT:
             e.preventDefault();
@@ -155,6 +161,8 @@ document.addEventListener('keyup', function (e) {
                 }
             }
             redraw(false);
+            clearCanvas(activeCanvas);
+            highlight(idSelected);
             break;
         case keys.DOWN:
             e.preventDefault();
@@ -169,6 +177,8 @@ document.addEventListener('keyup', function (e) {
                 }
             }
             redraw(false);
+            clearCanvas(activeCanvas);
+            highlight(idSelected);
             break;
     }
 })
@@ -470,7 +480,7 @@ function highlight (id) {
     }
     activeContext.stroke();
     activeContext.closePath();
-    activeContext.fill();
+    // activeContext.fill();
 }
 
 $(".list-group").on('click', '.delete-element', function () {
@@ -491,15 +501,17 @@ $(".list-group").on('mouseenter', '.list-group-item', function () {
 
 $(".list-group").on('click', '.list-group-item', function () {
     $(".active").closest('.list-group-item').removeClass('active');
+    markCanvas.style.visibility = 'hidden';
+    activeCanvas.style.visibility = 'visible';
     idSelected = $(this).children(".delete-element").attr("id");
     console.log(idSelected);
     $("#" + idSelected).closest('.list-group-item').addClass('active');
 });
-
+/*
 $(".list-group").on('mouseleave', '.list-group-item', function () {
     clearCanvas(activeCanvas);
 });
-
+*/
 $(".list-group").on('change', '.subtype-select', function () {
     var id = $(this).closest(".list-group-item").children(".delete-element").attr("id");
     elements[id].subtype = $(this).val();
