@@ -33,6 +33,7 @@ var keys = {
 var elementNames = ['', 'Segment', 'Region', 'Polyline'];
 var defaultColors = ['black', '#ffed79', '#5ce032', '#00bcff'];
 var auxiliaryColors = ['black', '#fff4ae', '#acf694', '#aee3f6'];
+var LEFT_MOUSE_BUTTON = 1, LINE_WIDTH = 2, HIGHLIGHT_VALUE = 0.95, RELATIVE_SCALE = 0.25;
 var MIN_POSSIBLE_SCALE = 0.2, MAX_POSSIBLE_SCALE = 5, POINT_RADIUS = 8;
 
 var selectionMode = elementTypes.NONE;
@@ -389,6 +390,7 @@ function clearCanvas (canvas) {
 
 function highlight (id) {
     activeContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
+    activeContext.globalAlpha = HIGHLIGHT_VALUE;
 
     switch (elements[id].type) {
         case "segment":
@@ -441,7 +443,6 @@ $(".list-group").on('mouseleave', '.list-group-item', function () {
 $(".list-group").on('change', '.subtype-select', function () {
     var id = $(this).closest(".list-group-item").children(".delete-element").attr("id");
     elements[id].subtype = $(this).val();
-    drawRect
 })
 
 function generateLi (id) {
