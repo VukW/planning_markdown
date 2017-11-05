@@ -14,16 +14,13 @@ var elementTypes = {
     REGION: 2,
     POLYLINE: 3
 };
-var elementSubtypes = {
-    NONE: 0,
-    WINDOW: 1,
-    WALL: 2,
-    DOOR: 3
-};
 var keys = {
     SHIFT: 16,
+    ESC: 27,
     SPACE: 32,
+    LEFT: 37,
     UP: 38,
+    RIGHT: 39,
     DOWN: 40,
     A: 65,
     C: 67,
@@ -37,9 +34,10 @@ var LEFT_MOUSE_BUTTON = 1, LINE_WIDTH = 2, HIGHLIGHT_VALUE = 0.95, RELATIVE_SCAL
 var MIN_POSSIBLE_SCALE = 0.2, MAX_POSSIBLE_SCALE = 5, POINT_RADIUS = 8;
 
 var selectionMode = elementTypes.NONE;
+var idSelected = undefined;
 var prev = new Point(-1, -1), curr;
 var innerOffset, outerOffset, polyline_points = [];
-var scale, current_id = 0, drag = 0, drawAlong = 0;
+var scale, current_id = 0, drag = 0, transform = 0, drawAlong = 0;
 
 var imageCanvas = document.getElementById("image");
 imageCanvas.width = window.innerWidth * 5 / 6;
@@ -84,15 +82,22 @@ imageObj.src = image_src;
 
 document.addEventListener('keydown', function (e) {
     if (e.which == keys.SHIFT) {
+        e.preventDefault();
         drag = 1;
+        transform = 1;
     }
 }, false);
 
 document.addEventListener('keyup', function (e) {
     switch (e.which) {
         case keys.SHIFT:
+            e.preventDefault();
             drag = 0;
+            transform = 0;
             break;
+        case keys.ESC:
+            idSelected = undefined;
+            $(".active").closest('.list-group-item').removeClass('active');
         case keys.A:
             drawAlong = !drawAlong;
             break;
@@ -109,13 +114,61 @@ document.addEventListener('keyup', function (e) {
             e.preventDefault();
             nextButton.click();
             break;
+        case keys.LEFT:
+            e.preventDefault();
+            if (transform) {
+                if (elements[idSelected].type == "region") {
+                    elements[idSelected].path[1].x--;
+                    elements[idSelected].path[2].x--;
+                }
+            } else {
+                for (var i = 0; i < elements[idSelected].path.length; i++) {
+                    elements[idSelected].path[i].x--;
+                }
+            }
+            redraw(false);
+            break;
         case keys.UP:
             e.preventDefault();
-            zoomInButton.click();
+            if (transform) {
+                if (elements[idSelected].type == "region") {
+                    elements[idSelected].path[2].y--;
+                    elements[idSelected].path[3].y--;
+                }
+            } else {
+                for (var i = 0; i < elements[idSelected].path.length; i++) {
+                    elements[idSelected].path[i].y--;
+                }
+            }
+            redraw(false);
+            break;
+        case keys.RIGHT:
+            e.preventDefault();
+            if (transform) {
+                if (elements[idSelected].type == "region") {
+                    elements[idSelected].path[1].x++;
+                    elements[idSelected].path[2].x++;
+                }
+            } else {
+                for (var i = 0; i < elements[idSelected].path.length; i++) {
+                    elements[idSelected].path[i].x++;
+                }
+            }
+            redraw(false);
             break;
         case keys.DOWN:
             e.preventDefault();
-            zoomOutButton.click();
+            if (transform) {
+                if (elements[idSelected].type == "region") {
+                    elements[idSelected].path[2].y++;
+                    elements[idSelected].path[3].y++;
+                }
+            } else {
+                for (var i = 0; i < elements[idSelected].path.length; i++) {
+                    elements[idSelected].path[i].y++;
+                }
+            }
+            redraw(false);
             break;
     }
 })
@@ -434,6 +487,13 @@ $(".list-group").on('click', '.delete-element', function () {
 $(".list-group").on('mouseenter', '.list-group-item', function () {
     var id = $(this).children(".delete-element").attr("id");
     highlight(id);
+});
+
+$(".list-group").on('click', '.list-group-item', function () {
+    $(".active").closest('.list-group-item').removeClass('active');
+    idSelected = $(this).children(".delete-element").attr("id");
+    console.log(idSelected);
+    $("#" + idSelected).closest('.list-group-item').addClass('active');
 });
 
 $(".list-group").on('mouseleave', '.list-group-item', function () {
