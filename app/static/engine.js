@@ -120,9 +120,10 @@ document.addEventListener('keyup', function (e) {
         case keys.LEFT:
             e.preventDefault();
             if (transform) {
+                var shift = getShift(elements[idSelected].path);
                 if (elements[idSelected].type == "region") {
-                    elements[idSelected].path[1].x--;
-                    elements[idSelected].path[2].x--;
+                    elements[idSelected].path[indexShift(1, shift)].x--;
+                    elements[idSelected].path[indexShift(2, shift)].x--;
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -136,9 +137,10 @@ document.addEventListener('keyup', function (e) {
         case keys.UP:
             e.preventDefault();
             if (transform) {
+                var shift = getShift(elements[idSelected].path);
                 if (elements[idSelected].type == "region") {
-                    elements[idSelected].path[2].y--;
-                    elements[idSelected].path[3].y--;
+                    elements[idSelected].path[indexShift(2, shift)].y--;
+                    elements[idSelected].path[indexShift(3, shift)].y--;
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -152,9 +154,10 @@ document.addEventListener('keyup', function (e) {
         case keys.RIGHT:
             e.preventDefault();
             if (transform) {
+                var shift = getShift(elements[idSelected].path);
                 if (elements[idSelected].type == "region") {
-                    elements[idSelected].path[1].x++;
-                    elements[idSelected].path[2].x++;
+                    elements[idSelected].path[indexShift(1, shift)].x++;
+                    elements[idSelected].path[indexShift(2, shift)].x++;
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -168,9 +171,10 @@ document.addEventListener('keyup', function (e) {
         case keys.DOWN:
             e.preventDefault();
             if (transform) {
+                var shift = getShift(elements[idSelected].path);
                 if (elements[idSelected].type == "region") {
-                    elements[idSelected].path[2].y++;
-                    elements[idSelected].path[3].y++;
+                    elements[idSelected].path[indexShift(2, shift)].y++;
+                    elements[idSelected].path[indexShift(3, shift)].y++;
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -335,6 +339,46 @@ function follow (e) {
             drawRect(animContext, prev, mouse, defaultColors[selectionMode], false);
             break;
     }
+}
+
+function getShift(path) {
+    var minX = path[0].x;
+    for (var i = 1; i < path.length; i++) {
+        if (minX > path[i].x) {
+            minX = path[i].x;
+        }
+    }
+
+    var minY = path[0].y;
+    for (var i = 1; i < path.length; i++) {
+        if (minY > path[i].y) {
+            minY = path[i].y;
+        }
+    }
+
+    if (path[0].x == minX) {
+        if (path[0].y == minY) {
+            return 0;
+        } else {
+            return 3;
+        }
+    } else {
+        if (path[0].y == minY) {
+            return 1;
+        } else {
+            return 2;
+        }
+    }
+}
+
+function indexShift (original, shift) {
+    var shifted = original - shift;
+    if (shifted < 0) {
+        shifted += 4;
+    } else if (shifted > 4) {
+        shifted -= 4;
+    }
+    return shifted;
 }
 
 function sendMarkdown () {
