@@ -99,6 +99,7 @@ document.addEventListener('keyup', function (e) {
             idSelected = undefined;
             markCanvas.style.visibility = 'visible';
             activeCanvas.style.visibility = 'hidden';
+            clearCanvas(activeCanvas);
             $(".active").closest('.list-group-item').removeClass('active');
         case keys.A:
             drawAlong = !drawAlong;
@@ -443,6 +444,10 @@ function drawAll (context, build_list) {
                     $("#" + id).closest(".list-group-item").children(".subtype-select").val(elements[id].subtype).change();
                 }
             }
+
+            if (current_id < parseInt(id)) {
+                current_id = parseInt(id) + 1;
+            }
         }
     }
 }
@@ -493,18 +498,19 @@ $(".list-group").on('click', '.delete-element', function () {
     clearCanvas(activeCanvas);
     drawAll(markContext, false);
 });
-
+/*
 $(".list-group").on('mouseenter', '.list-group-item', function () {
     var id = $(this).children(".delete-element").attr("id");
     highlight(id);
 });
-
+*/
 $(".list-group").on('click', '.list-group-item', function () {
     $(".active").closest('.list-group-item').removeClass('active');
     markCanvas.style.visibility = 'hidden';
     activeCanvas.style.visibility = 'visible';
     idSelected = $(this).children(".delete-element").attr("id");
-    console.log(idSelected);
+    clearCanvas(activeCanvas);
+    highlight(idSelected);
     $("#" + idSelected).closest('.list-group-item').addClass('active');
 });
 /*
