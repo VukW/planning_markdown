@@ -5,7 +5,7 @@ DEBUG = True
 # WEB-SERVICE
 # =======================================
 LOCKED_TIME_SECONDS = 600
-
+NEXT_UNMARKED_ONLY = True
 # =============
 # DB
 DB_FILE_PATH = 'saved_markdowns.json'

@@ -7,4 +7,4 @@ This repo contains 3 main parts.
 3. [Models](models) load already tuned models, and predict markdown for every image in the db.
 
 
-Learning models is out of scope here; the relevant code is located at `../planning_nn_model` repo.
+Learning models is out of scope here; the relevant code is located at [planning_nn_model](../planning_nn_model) repo.
