@@ -57,6 +57,10 @@ canvas {
     vertical-align: center;
 }
 
+.black-font {
+    color: black;
+}
+
 .delete-element:hover {
     background-color: transparent;
     color: rgb(240, 15, 15);

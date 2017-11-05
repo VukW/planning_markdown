@@ -527,10 +527,10 @@ function generateLi (id) {
     liHTML = '<li class="list-group-item ' + elementNames[selectionMode].toLowerCase() + '-item sharp">';
     liHTML += elementNames[selectionMode];
     if (selectionMode == elementTypes.REGION) {
-        liHTML += '<br><select class="subtype-select">' +
-                  '<option value="rect_wall">Wall</option>' +
-                  '<option value="rect_window">Window</option>' +
-                  '<option value="rect_door">Door</option></select>';
+        liHTML += '<br><select class="subtype-select black-font">' +
+                  '<option class="black-font" value="rect_wall">Wall</option>' +
+                  '<option class="black-font" value="rect_window">Window</option>' +
+                  '<option class="black-font" value="rect_door">Door</option></select>';
     }
     liHTML += '<button class="btn btn-default delete-element" id="' + id +
               '"><span class="glyphicon glyphicon-remove"></span></button>'; + '</li>';
