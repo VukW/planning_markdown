@@ -499,10 +499,6 @@ function drawAll (context, build_list) {
                     $("#" + id).closest(".list-group-item").children(".subtype-select").val(elements[id].subtype).change();
                 }
             }
-
-            if (current_id < parseInt(id)) {
-                current_id = parseInt(id) + 1;
-            }
         }
     }
 }
@@ -607,6 +603,14 @@ function redraw (load) {
     markContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
     if (load) {
         drawAll(markContext, true);
+        for (var id in elements) {
+            if (id != "area") {
+                if (current_id < parseInt(id)) {
+                    current_id = parseInt(id);
+                }
+            }
+        }
+        current_id++;
     } else {
         drawAll(markContext, false);
     }
