@@ -75,7 +75,7 @@ imageObj.onload = function () {
     if (!("area" in elements)) {
         elements.area = 0.0;
     }
-    areaInput.value = 0.0;
+    areaInput.value = elements.area;
     redraw(true);
 }
 imageObj.src = image_src;
@@ -98,11 +98,10 @@ document.addEventListener('keyup', function (e) {
         case keys.ESC:
             idSelected = undefined;
             markCanvas.style.visibility = 'visible';
-            activeCanvas.style.visibility = 'hidden';
             clearCanvas(activeCanvas);
             $(".active").closest('.list-group-item').removeClass('active');
         case keys.A:
-            drawAlong = !drawAlong;
+            // drawAlong = !drawAlong;
             break;
         case keys.C:
             $("#polyline").click();
@@ -124,6 +123,9 @@ document.addEventListener('keyup', function (e) {
                 if (elements[idSelected].type == "region") {
                     elements[idSelected].path[indexShift(1, shift)].x--;
                     elements[idSelected].path[indexShift(2, shift)].x--;
+                    if ((shift == 1) || (shift == 2)) {
+                        elements[idSelected].path[4].x--;
+                    }
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -141,6 +143,9 @@ document.addEventListener('keyup', function (e) {
                 if (elements[idSelected].type == "region") {
                     elements[idSelected].path[indexShift(2, shift)].y--;
                     elements[idSelected].path[indexShift(3, shift)].y--;
+                    if ((shift == 3) || (shift == 2)) {
+                        elements[idSelected].path[4].y--;
+                    }
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -158,6 +163,9 @@ document.addEventListener('keyup', function (e) {
                 if (elements[idSelected].type == "region") {
                     elements[idSelected].path[indexShift(1, shift)].x++;
                     elements[idSelected].path[indexShift(2, shift)].x++;
+                    if ((shift == 1) || (shift == 2)) {
+                        elements[idSelected].path[4].x++;
+                    }
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -175,6 +183,9 @@ document.addEventListener('keyup', function (e) {
                 if (elements[idSelected].type == "region") {
                     elements[idSelected].path[indexShift(2, shift)].y++;
                     elements[idSelected].path[indexShift(3, shift)].y++;
+                    if ((shift == 3) || (shift == 2)) {
+                        elements[idSelected].path[4].y++;
+                    }
                 }
             } else {
                 for (var i = 0; i < elements[idSelected].path.length; i++) {
@@ -500,7 +511,7 @@ function clearCanvas (canvas) {
     canvas.width = canvas.width;
 }
 
-function highlight (id) {
+function highlight (id, to_fill) {
     activeContext.setTransform(scale, 0, 0, scale, innerOffset.x, innerOffset.y);
     activeContext.globalAlpha = HIGHLIGHT_VALUE;
 
@@ -529,7 +540,9 @@ function highlight (id) {
     }
     activeContext.stroke();
     activeContext.closePath();
-    // activeContext.fill();
+    if (to_fill) {
+        activeContext.fill();
+    }
 }
 
 $(".list-group").on('click', '.delete-element', function () {
@@ -542,26 +555,30 @@ $(".list-group").on('click', '.delete-element', function () {
     clearCanvas(activeCanvas);
     drawAll(markContext, false);
 });
-/*
+
 $(".list-group").on('mouseenter', '.list-group-item', function () {
-    var id = $(this).children(".delete-element").attr("id");
-    highlight(id);
+    if (idSelected == undefined) {
+        var id = $(this).children(".delete-element").attr("id");
+        highlight(id, true);
+    }
 });
-*/
+
 $(".list-group").on('click', '.list-group-item', function () {
     $(".active").closest('.list-group-item').removeClass('active');
     markCanvas.style.visibility = 'hidden';
     activeCanvas.style.visibility = 'visible';
     idSelected = $(this).children(".delete-element").attr("id");
     clearCanvas(activeCanvas);
-    highlight(idSelected);
+    highlight(idSelected, false);
     $("#" + idSelected).closest('.list-group-item').addClass('active');
 });
-/*
+
 $(".list-group").on('mouseleave', '.list-group-item', function () {
-    clearCanvas(activeCanvas);
+    if (idSelected == undefined) {
+        clearCanvas(activeCanvas);
+    }
 });
-*/
+
 $(".list-group").on('change', '.subtype-select', function () {
     var id = $(this).closest(".list-group-item").children(".delete-element").attr("id");
     elements[id].subtype = $(this).val();
